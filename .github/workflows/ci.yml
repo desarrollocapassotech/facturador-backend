@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: facturador
+          POSTGRES_PASSWORD: facturador
+          POSTGRES_DB: facturador
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U facturador"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://facturador:facturador@localhost:5432/facturador
+      DIRECT_URL: postgresql://facturador:facturador@localhost:5432/facturador
+      JWT_SECRET: ci-secreto-de-prueba-con-mas-de-32-caracteres
+      FRONTEND_URL: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma validate
+      # Las migraciones aplican limpias y el schema no tiene cambios sin migrar.
+      - run: npx prisma migrate deploy
+      - run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --ci
+      - run: npm run build

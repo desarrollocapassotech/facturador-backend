@@ -1,0 +1,19 @@
+/**
+ * Único contrato de autenticación que ven los demás módulos.
+ * Si se reemplaza el login propio por Clerk, cambia cómo se arma este objeto
+ * (dentro de `auth`), no quién lo consume.
+ */
+export interface AuthContext {
+  tenantId: string;
+  tipo: 'usuario' | 'integracion';
+  usuarioId?: string;
+  integracionId?: string;
+  scopes: string[];
+}
+
+/** Payload del JWT de sesión. Claves cortas a propósito. */
+export interface SesionJwtPayload {
+  sub: string; // usuarioId
+  tid: string; // tenantId
+  tv: number; // tokenVersion del usuario al emitir
+}

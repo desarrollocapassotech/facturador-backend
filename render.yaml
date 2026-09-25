@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: facturador-backend
+    runtime: node
+    region: ohio # igual que Vialto
+    plan: free
+    branch: main
+    buildCommand: npm ci && npm run build && npx prisma migrate deploy
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: DATABASE_URL # Neon rama production, con pooler
+        sync: false
+      - key: DIRECT_URL # Neon rama production, sin pooler
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: FRONTEND_URL # URL del static site del frontend
+        sync: false

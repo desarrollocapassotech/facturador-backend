@@ -1,0 +1,72 @@
+// Esquema completo de referencia: ARCHITECTURE.md §5.
+// Cada fase agrega sus modelos con su propia migración.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AmbienteArca {
+  HOMOLOGACION
+  PRODUCCION
+}
+
+/// Código ARCA en comentario (CondicionIVAReceptorId / condición del emisor).
+enum CondicionIva {
+  RESPONSABLE_INSCRIPTO // 1
+  EXENTO                // 4
+  CONSUMIDOR_FINAL      // 5
+  MONOTRIBUTO           // 6
+  NO_CATEGORIZADO       // 7
+  PROVEEDOR_EXTERIOR    // 8
+  CLIENTE_EXTERIOR      // 9
+  IVA_LIBERADO          // 10
+  MONOTRIBUTO_SOCIAL    // 13
+  NO_ALCANZADO          // 15
+  MONOTRIBUTO_TIP       // 16 Monotributista trabajador independiente promovido
+}
+
+model Tenant {
+  id                String       @id @default(cuid())
+  slug              String       @unique
+  nombreFantasia    String
+  razonSocial       String
+  cuit              String       @unique // 11 dígitos, sin guiones
+  condicionIva      CondicionIva
+  domicilioFiscal   String
+  ingresosBrutos    String?
+  inicioActividades DateTime?    @db.Date
+  ambienteArca      AmbienteArca @default(HOMOLOGACION)
+  activo            Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  usuarios Usuario[]
+
+  @@map("tenants")
+}
+
+model Usuario {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String // normalizado a minúsculas
+  nombre       String?
+  passwordHash String? // null = solo entra por token de acceso de integración (Fase 4)
+  activo       Boolean   @default(true)
+  tokenVersion Int       @default(0) // incrementar invalida todas sus sesiones JWT
+  creadoPor    String    @default("script") // script | integracion:<id>
+  ultimoAcceso DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, email])
+  @@index([email])
+  @@map("usuarios")
+}
