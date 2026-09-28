@@ -77,6 +77,14 @@ Todos requieren sesión (Bearer) y operan sobre el tenant de la sesión.
 | POST | `/api/comprobantes/:id/notas` | `{ clase: NOTA_CREDITO \| NOTA_DEBITO, motivo }`: borrador de nota sobre una factura emitida, con su letra y sus líneas. Una NC por el total anula la factura al emitirse |
 | GET | `/api/comprobantes/:id/pdf` | PDF (solo con CAE). Original + duplicado según la plantilla; marca de agua en homologación |
 
+## Endpoints (Fase 3)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/recibos/pdf` | Genera un recibo en PDF, sin guardarlo. `{ tipo: COBRO \| PAGO, numero?, fecha, moneda, contraparte: { nombre, documento?, domicilio? }, items: [{ descripcion, cantidad?, importe }], total, medioPago?, observaciones?, comprobantesAplicados? (COBRO), periodo? (PAGO) }`. La parte del tenant (quien cobra o quien paga) sale de los datos del emisor; el estilo, de la plantilla PDF. `400` si el total no coincide con la suma de los conceptos |
+
+El generador vive en `src/modules/recibos/core/`: TypeScript puro (solo `pdfkit`), con su propio `package.json` (`@capassotech/recibos`) y tests. Un test falla si importa algo fuera de esa carpeta.
+
 En homologación sin certificado propio se emite con el CUIT de prueba de AfipSDK (`20409378472`). Como ese CUIT es compartido, la fecha informada a ARCA puede quedar en el futuro (nunca anterior al último comprobante autorizado).
 
 ## Auth

@@ -1,0 +1,10 @@
+{
+  "name": "@capassotech/recibos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generador de recibos de cobro y de pago en PDF. Sin dependencias del Facturador: se va a publicar tal cual.",
+  "main": "index.ts",
+  "peerDependencies": {
+    "pdfkit": "^0.18.0"
+  }
+}

@@ -5,6 +5,11 @@ export function normalizarCuit(cuit: string): string {
   return cuit.replace(/[-\s.]/g, '');
 }
 
+/** "30712345678" → "30-71234567-8" (si no son 11 dígitos, lo devuelve igual). */
+export function formatearCuit(cuit: string): string {
+  return /^\d{11}$/.test(cuit) ? `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}` : cuit;
+}
+
 /** CUIT/CUIL válido: 11 dígitos con dígito verificador correcto (módulo 11). */
 export function esCuitValido(cuit: string): boolean {
   const d = normalizarCuit(cuit);

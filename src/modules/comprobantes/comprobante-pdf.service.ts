@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { formatearCuit } from '../../shared/util/cuit';
 import { PdfComprobanteRenderer, type ComprobantePdfData } from '../pdf';
 import { TenantsService } from '../tenants';
 import { ComprobantesService } from './comprobantes.service';
@@ -11,10 +12,6 @@ function ddmmaaaa(d: Date | string | null | undefined): string {
   const iso = typeof d === 'string' ? d : d.toISOString();
   const [a, m, dd] = iso.slice(0, 10).split('-');
   return `${dd}/${m}/${a}`;
-}
-
-function formatearCuit(cuit: string): string {
-  return /^\d{11}$/.test(cuit) ? `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}` : cuit;
 }
 
 function slug(texto: string): string {
