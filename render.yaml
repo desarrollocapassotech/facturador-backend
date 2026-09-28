@@ -21,3 +21,7 @@ services:
         value: 8h
       - key: FRONTEND_URL # URL del static site del frontend
         sync: false
+      - key: FACTURADOR_ENCRYPTION_KEY # no regenerar nunca: cifra los certificados guardados
+        sync: false
+      - key: AFIP_SDK_API_KEY
+        sync: false

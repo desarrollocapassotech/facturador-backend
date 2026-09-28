@@ -7,10 +7,12 @@ La arquitectura completa está en `../ARCHITECTURE.md`.
 
 ```bash
 npm install                 # también corre prisma generate
-cp .env.example .env        # completar DATABASE_URL, DIRECT_URL y JWT_SECRET
+cp .env.example .env        # completar DATABASE_URL, DIRECT_URL, JWT_SECRET, FACTURADOR_ENCRYPTION_KEY y AFIP_SDK_API_KEY
 npx prisma migrate deploy   # aplica las migraciones
 npm run start:dev           # http://localhost:3000/api
 ```
+
+Si `start:dev` se cuelga después de "Found 0 errors" (pasa con la extensión Console Ninja de VS Code), usar `npm run build && npm run start:prod`.
 
 Base de datos: proyecto Neon `facturador`, ramas `develop` (desarrollo) y `production`.
 
@@ -36,6 +38,46 @@ Volver a correr `crear-usuario` con un email existente le asigna la contraseña 
 | GET | `/api/health` | pública | Estado del servidor y de la base |
 | POST | `/api/auth/login` | pública (5 intentos/min por IP) | `{ email, password, tenantSlug? }` → `{ accessToken, usuario, tenant }`. `409` con `tenants[]` si el email existe en varias empresas |
 | GET | `/api/auth/me` | Bearer | Usuario y tenant de la sesión |
+
+## Endpoints (Fase 2)
+
+Todos requieren sesión (Bearer) y operan sobre el tenant de la sesión.
+
+**Configuración del tenant** (`modules/tenants`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET / PATCH | `/api/configuracion/emisor` | Datos fiscales del emisor. El CUIT y el ambiente no se cambian desde acá |
+| GET | `/api/configuracion/arca` | Ambiente, CUIT con el que se emite (real o de prueba), certificado vigente y si AfipSDK está configurado |
+| GET / POST | `/api/configuracion/puntos-venta` | Listar / crear `{ numero, ambiente, descripcion? }` |
+| PATCH | `/api/configuracion/puntos-venta/:id` | `{ descripcion?, activo? }` |
+| GET / POST | `/api/configuracion/certificados` | Listar (solo metadatos) / cargar `{ ambiente, certificadoPem, clavePrivadaPem }`. Se valida pareja, vencimiento y CUIT; se guarda cifrado y reemplaza al anterior del ambiente |
+| GET / PATCH | `/api/configuracion/plantilla-pdf` | Colores, texto de pie, duplicado |
+| GET / PUT / DELETE | `/api/configuracion/plantilla-pdf/logo` | Ver / subir (multipart, campo `logo`, PNG o JPG hasta 300 KB) / borrar |
+
+**Clientes** (`modules/clientes`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/clientes?q=&incluirInactivos=` | Busca por razón social o documento (hasta 200) |
+| GET | `/api/clientes/padron/:cuit` | Constancia de inscripción en ARCA: razón social, domicilio, condición IVA |
+| GET / POST / PATCH | `/api/clientes`, `/api/clientes/:id` | Alta y edición. Valida el dígito verificador del CUIT/CUIL; `409` si el documento ya existe |
+
+**Comprobantes** (`modules/comprobantes`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/comprobantes?estado=&clienteId=&pagina=&porPagina=` | Lista paginada `{ total, pagina, porPagina, items }` |
+| POST | `/api/comprobantes` | Crea un borrador de factura. `tipo` opcional (`FACTURA_A/B/C`); si falta, se usa la letra sugerida |
+| GET | `/api/comprobantes/:id` | Detalle con líneas, alícuotas, cliente, notas asociadas, `letraSugerida` y `advertenciaLetra` |
+| PATCH | `/api/comprobantes/:id` | Edita un BORRADOR o RECHAZADO. Requiere `version` (lock optimista, `409` si cambió) |
+| DELETE | `/api/comprobantes/:id` | Solo borradores que nunca fueron a ARCA |
+| POST | `/api/comprobantes/:id/emitir` | `{ version }` + header **`Idempotency-Key`** obligatorio. Devuelve EMITIDO, `422` si ARCA rechaza (con `message` y `detalle`) o PENDIENTE_VERIFICACION si no se sabe el resultado. Reintentar con la misma clave no emite dos veces |
+| POST | `/api/comprobantes/:id/verificar` | Consulta en ARCA un PENDIENTE_VERIFICACION (también lo hace un cron cada minuto) |
+| POST | `/api/comprobantes/:id/notas` | `{ clase: NOTA_CREDITO \| NOTA_DEBITO, motivo }`: borrador de nota sobre una factura emitida, con su letra y sus líneas. Una NC por el total anula la factura al emitirse |
+| GET | `/api/comprobantes/:id/pdf` | PDF (solo con CAE). Original + duplicado según la plantilla; marca de agua en homologación |
+
+En homologación sin certificado propio se emite con el CUIT de prueba de AfipSDK (`20409378472`). Como ese CUIT es compartido, la fecha informada a ARCA puede quedar en el futuro (nunca anterior al último comprobante autorizado).
 
 ## Auth
 

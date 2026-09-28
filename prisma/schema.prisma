@@ -1,5 +1,7 @@
 // Esquema completo de referencia: ARCHITECTURE.md §5.
 // Cada fase agrega sus modelos con su propia migración.
+// Relaciones entre entidades del mismo tenant: FK compuesta (tenantId, id), así la base
+// impide que un registro apunte a otro de un tenant distinto.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,6 +12,8 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+// ─────────────────────────────── Enums ───────────────────────────────
 
 enum AmbienteArca {
   HOMOLOGACION
@@ -31,6 +35,55 @@ enum CondicionIva {
   MONOTRIBUTO_TIP       // 16 Monotributista trabajador independiente promovido
 }
 
+enum TipoDocumento {
+  CUIT             // 80
+  CUIL             // 86
+  DNI              // 96
+  PASAPORTE        // 94
+  CONSUMIDOR_FINAL // 99 (DocNro 0)
+}
+
+enum TipoComprobante {
+  FACTURA_A      // 1
+  NOTA_DEBITO_A  // 2
+  NOTA_CREDITO_A // 3
+  FACTURA_B      // 6
+  NOTA_DEBITO_B  // 7
+  NOTA_CREDITO_B // 8
+  FACTURA_C      // 11
+  NOTA_DEBITO_C  // 12
+  NOTA_CREDITO_C // 13
+}
+
+enum ConceptoArca {
+  PRODUCTOS             // 1
+  SERVICIOS             // 2 → exige FchServDesde/Hasta y FchVtoPago
+  PRODUCTOS_Y_SERVICIOS // 3 → ídem
+}
+
+enum Moneda {
+  ARS // ARCA "PES"
+  USD // ARCA "DOL"
+}
+
+enum EstadoComprobante {
+  BORRADOR               // editable; nada fue a ARCA
+  EMITIENDO              // bloqueado; hay una llamada a ARCA en curso
+  PENDIENTE_VERIFICACION // se cortó la comunicación; hay número reservado; se resuelve con FECompConsultar
+  EMITIDO                // tiene CAE
+  RECHAZADO              // ARCA rechazó o falló antes de enviar; vuelve a ser editable
+  ANULADO                // factura compensada totalmente por NC emitida
+}
+
+enum UnidadItem {
+  HORA
+  UNIDAD
+  SERVICIO
+  MES
+}
+
+// ─────────────────────────────── Tenants ───────────────────────────────
+
 model Tenant {
   id                String       @id @default(cuid())
   slug              String       @unique
@@ -46,10 +99,72 @@ model Tenant {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  usuarios Usuario[]
+  usuarios     Usuario[]
+  puntosVenta  PuntoVenta[]
+  certificados CertificadoArca[]
+  plantillaPdf PlantillaPdf?
+  clientes     Cliente[]
+  comprobantes Comprobante[]
+  lineas       ComprobanteLinea[]
+  alicuotas    ComprobanteAlicuota[]
+  arcaLogs     ArcaLog[]
 
   @@map("tenants")
 }
+
+model PuntoVenta {
+  id          String       @id @default(cuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  numero      Int
+  ambiente    AmbienteArca
+  descripcion String?
+  activo      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  comprobantes Comprobante[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, ambiente, numero])
+  @@map("puntos_venta")
+}
+
+/// Un certificado activo por (tenant, ambiente). Los anteriores quedan con activo=false (historial).
+/// Obligatorio en PRODUCCION. En HOMOLOGACION es opcional: sin certificado se usa el CUIT de prueba
+/// de AfipSDK (como Vialto); con certificado se prueba con el CUIT real del tenant.
+model CertificadoArca {
+  id           String       @id @default(cuid())
+  tenantId     String
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ambiente     AmbienteArca
+  certCifrado  String // PEM cifrado (v1:iv:tag:cipher)
+  claveCifrada String // PEM cifrado
+  alias        String? // CN del certificado
+  huellaSha256 String // fingerprint del cert (para mostrar, nunca el contenido)
+  venceEl      DateTime
+  activo       Boolean      @default(true)
+  cargadoPorId String?
+  createdAt    DateTime     @default(now())
+
+  @@index([tenantId, ambiente, activo])
+  @@map("certificados_arca")
+}
+
+model PlantillaPdf {
+  tenantId         String   @id
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  logo             Bytes? // ≤ 300 KB, PNG/JPG
+  logoMime         String?
+  colorPrimario    String   @default("#111827")
+  colorSecundario  String   @default("#6B7280")
+  textoPie         String?
+  mostrarDuplicado Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+
+  @@map("plantillas_pdf")
+}
+
+// ─────────────────────────────── Auth ───────────────────────────────
 
 model Usuario {
   id           String    @id @default(cuid())
@@ -69,4 +184,166 @@ model Usuario {
   @@unique([tenantId, email])
   @@index([email])
   @@map("usuarios")
+}
+
+// ─────────────────────────────── Clientes ───────────────────────────────
+
+model Cliente {
+  id                 String        @id @default(cuid())
+  tenantId           String
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  razonSocial        String
+  tipoDocumento      TipoDocumento
+  numeroDocumento    String // "0" para consumidor final anónimo
+  condicionIva       CondicionIva
+  domicilio          String?
+  email              String?
+  pais               String        @default("AR")
+  monedaPreferida    Moneda        @default(ARS)
+  diasVencimiento    Int? // para FchVtoPago en servicios
+  activo             Boolean       @default(true)
+  datosPadron        Json? // última respuesta de padrón (snapshot)
+  padronConsultadoEn DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  comprobantes Comprobante[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, tipoDocumento, numeroDocumento])
+  @@map("clientes")
+}
+
+// ─────────────────────────────── Comprobantes ───────────────────────────────
+
+model Comprobante {
+  id              String            @id @default(cuid())
+  tenantId        String
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tipo            TipoComprobante
+  estado          EstadoComprobante @default(BORRADOR)
+  ambiente        AmbienteArca // snapshot del ambiente al crear/emitir
+
+  clienteId       String
+  cliente         Cliente           @relation(fields: [tenantId, clienteId], references: [tenantId, id], onDelete: Restrict)
+  puntoVentaId    String
+  puntoVenta      PuntoVenta        @relation(fields: [tenantId, puntoVentaId], references: [tenantId, id], onDelete: Restrict)
+
+  // Numeración: se reserva justo antes de llamar a ARCA (ver ARCHITECTURE.md §8.3)
+  numero          Int?
+  numeroReservado Int?
+
+  fechaEmision       DateTime     @db.Date
+  concepto           ConceptoArca
+  fechaServicioDesde DateTime?    @db.Date
+  fechaServicioHasta DateTime?    @db.Date
+  fechaVtoPago       DateTime?    @db.Date
+
+  moneda             Moneda       @default(ARS)
+  cotizacion         Decimal      @default(1) @db.Decimal(15, 6)
+  cancelaMismaMoneda Boolean      @default(false) // CanMisMonExt, solo moneda extranjera
+
+  importeNetoGravado Decimal @default(0) @db.Decimal(15, 2)
+  importeNoGravado   Decimal @default(0) @db.Decimal(15, 2)
+  importeExento      Decimal @default(0) @db.Decimal(15, 2)
+  importeIva         Decimal @default(0) @db.Decimal(15, 2)
+  importeTributos    Decimal @default(0) @db.Decimal(15, 2)
+  importeTotal       Decimal @default(0) @db.Decimal(15, 2)
+
+  // Snapshots para PDF y auditoría (el comprobante emitido no cambia si cambian el cliente o el tenant)
+  emisorSnapshot   Json?
+  receptorSnapshot Json?
+
+  // NC/ND: comprobante asociado (CbtesAsoc)
+  asociadoId     String?
+  asociado       Comprobante?  @relation("Asociacion", fields: [tenantId, asociadoId], references: [tenantId, id], onDelete: Restrict)
+  asociadosDesde Comprobante[] @relation("Asociacion")
+  motivo         String?
+
+  observaciones     String? // texto libre que va al PDF
+  cae               String?
+  caeVencimiento    DateTime? @db.Date
+  observacionesArca Json?
+  errorMensaje      String?
+  errorDetalle      String?
+
+  idempotencyKey String? // del botón "Emitir" o de la API pública
+  payloadHash    String? // hash del request a ARCA del último intento
+  intentos       Int     @default(0)
+  version        Int     @default(0) // lock optimista para edición
+
+  creadoPorId  String?
+  emitidoPorId String?
+  emitidoEn    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  lineas    ComprobanteLinea[]
+  alicuotas ComprobanteAlicuota[]
+  arcaLogs  ArcaLog[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, ambiente, puntoVentaId, tipo, numero]) // Postgres permite múltiples NULL
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, estado])
+  @@index([tenantId, clienteId])
+  @@index([estado, updatedAt])
+  @@map("comprobantes")
+}
+
+model ComprobanteLinea {
+  id              String      @id @default(cuid())
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  comprobanteId   String
+  comprobante     Comprobante @relation(fields: [tenantId, comprobanteId], references: [tenantId, id], onDelete: Cascade)
+  orden           Int
+  descripcion     String
+  cantidad        Decimal     @db.Decimal(15, 4)
+  unidad          UnidadItem
+  precioUnitario  Decimal     @db.Decimal(15, 4)
+  bonificacionPct Decimal     @default(0) @db.Decimal(5, 2)
+  alicuotaIva     Decimal     @db.Decimal(5, 2) // 0, 2.5, 5, 10.5, 21, 27 (en C se guarda y no se discrimina)
+  importeNeto     Decimal     @db.Decimal(15, 2)
+  importeIva      Decimal     @db.Decimal(15, 2)
+  importeTotal    Decimal     @db.Decimal(15, 2)
+
+  @@index([tenantId, comprobanteId])
+  @@map("comprobante_lineas")
+}
+
+/// AlicIva enviado a ARCA (Id, BaseImp, Importe) — ya agrupado por alícuota.
+model ComprobanteAlicuota {
+  id            String      @id @default(cuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  comprobanteId String
+  comprobante   Comprobante @relation(fields: [tenantId, comprobanteId], references: [tenantId, id], onDelete: Cascade)
+  arcaId        Int // 3=0%, 9=2.5%, 8=5%, 4=10.5%, 5=21%, 6=27%
+  baseImponible Decimal     @db.Decimal(15, 2)
+  importe       Decimal     @db.Decimal(15, 2)
+
+  @@unique([tenantId, comprobanteId, arcaId])
+  @@map("comprobante_alicuotas")
+}
+
+/// Auditoría de cada llamada a ARCA. Nunca guarda token/sign/cert/clave.
+model ArcaLog {
+  id            String       @id @default(cuid())
+  tenantId      String
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  comprobanteId String?
+  comprobante   Comprobante? @relation(fields: [tenantId, comprobanteId], references: [tenantId, id], onDelete: Restrict)
+  metodo        String // FECompUltimoAutorizado | FECAESolicitar | FECompConsultar | …
+  ambiente      AmbienteArca
+  request       Json // saneado
+  response      Json?
+  exitoso       Boolean
+  error         String?
+  duracionMs    Int
+  createdAt     DateTime     @default(now())
+
+  @@index([tenantId, comprobanteId])
+  @@index([tenantId, createdAt])
+  @@map("arca_logs")
 }
