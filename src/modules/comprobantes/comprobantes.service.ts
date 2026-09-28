@@ -5,10 +5,11 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { Prisma, type ConceptoArca, type TipoComprobante } from '@prisma/client';
+import { Prisma, type ConceptoArca, type Moneda, type TipoComprobante } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import type { AuthContext } from '../auth';
 import { ClientesService } from '../clientes';
+import { ItemsFacturablesService } from '../importaciones';
 import { TenantsService } from '../tenants';
 import { TIPOS_COMPROBANTE, tipoComprobante, type Letra } from './domain/codigos';
 import { deYmdArca, hoyArgentina } from './domain/fechas';
@@ -18,6 +19,7 @@ import {
   ActualizarBorradorDto,
   CrearBorradorDto,
   CrearNotaDto,
+  GenerarBorradoresDto,
   LineaDto,
   ListarComprobantesQuery,
 } from './dto/comprobantes.dto';
@@ -65,12 +67,50 @@ export function validarFechasServicio(d: DatosBorrador, exigir: boolean): void {
   }
 }
 
+type ItemParaBorrador = Awaited<ReturnType<ItemsFacturablesService['paraBorradores']>>[number];
+
+interface GrupoItems {
+  clienteId: string;
+  moneda: Moneda;
+  items: ItemParaBorrador[];
+}
+
+/** Un borrador por (cliente, moneda) o por (cliente, moneda, mes del período). */
+export function agruparItems(items: ItemParaBorrador[], agrupacion: 'cliente' | 'cliente-periodo'): GrupoItems[] {
+  const grupos = new Map<string, GrupoItems>();
+  for (const i of items) {
+    const mes = aYmd(i.periodoDesde ?? i.fecha)?.slice(0, 7) ?? 'sin-fecha';
+    const clave = [i.clienteId, i.moneda, agrupacion === 'cliente-periodo' ? mes : ''].join('|');
+    const g = grupos.get(clave) ?? { clienteId: i.clienteId as string, moneda: i.moneda, items: [] };
+    g.items.push(i);
+    grupos.set(clave, g);
+  }
+  return [...grupos.values()];
+}
+
+/** Concepto y fechas de servicio del borrador a partir de sus ítems (ARCA exige período para servicios). */
+export function fechasDeGrupo(
+  items: Array<Pick<ItemParaBorrador, 'unidad' | 'fecha' | 'periodoDesde' | 'periodoHasta'>>,
+  fechaEmision: string,
+  diasVencimiento: number | null,
+): { concepto: ConceptoArca; desde: string | null; hasta: string | null; vtoPago: string | null } {
+  const productos = items.filter((i) => i.unidad === 'UNIDAD').length;
+  const concepto: ConceptoArca = productos === items.length ? 'PRODUCTOS' : productos === 0 ? 'SERVICIOS' : 'PRODUCTOS_Y_SERVICIOS';
+  if (concepto === 'PRODUCTOS') return { concepto, desde: null, hasta: null, vtoPago: null };
+  const desdes = items.map((i) => aYmd(i.periodoDesde ?? i.fecha)).filter((x): x is string => Boolean(x)).sort();
+  const hastas = items.map((i) => aYmd(i.periodoHasta ?? i.fecha)).filter((x): x is string => Boolean(x)).sort();
+  const vto = deYmdArca(fechaEmision);
+  vto.setUTCDate(vto.getUTCDate() + (diasVencimiento ?? 10));
+  return { concepto, desde: desdes[0] ?? null, hasta: hastas[hastas.length - 1] ?? null, vtoPago: vto.toISOString().slice(0, 10) };
+}
+
 @Injectable()
 export class ComprobantesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly clientes: ClientesService,
     private readonly tenants: TenantsService,
+    private readonly items: ItemsFacturablesService,
   ) {}
 
   // ── Consultas ────────────────────────────────────────────────────────────
@@ -218,6 +258,8 @@ export class ComprobantesService {
     };
     validarFechasServicio(datos, false);
 
+    // Si no cambian las líneas, conservan el vínculo con el ítem importado que las originó.
+    const itemDeLinea = dto.lineas ? [] : actual.lineas.map((l) => l.itemFacturableId);
     const lineas: LineaDto[] =
       dto.lineas ??
       actual.lineas.map((l) => ({
@@ -256,7 +298,12 @@ export class ComprobantesService {
       await tx.comprobanteLinea.deleteMany({ where: { tenantId: auth.tenantId, comprobanteId: id } });
       await tx.comprobanteAlicuota.deleteMany({ where: { tenantId: auth.tenantId, comprobanteId: id } });
       await tx.comprobanteLinea.createMany({
-        data: calculo.lineas.map((l) => ({ ...l, tenantId: auth.tenantId, comprobanteId: id })),
+        data: calculo.lineas.map((l, n) => ({
+          ...l,
+          tenantId: auth.tenantId,
+          comprobanteId: id,
+          itemFacturableId: itemDeLinea[n] ?? null,
+        })),
       });
       if (calculo.alicuotas.length) {
         await tx.comprobanteAlicuota.createMany({
@@ -276,7 +323,106 @@ export class ComprobantesService {
     if (intentos > 0) {
       throw new ConflictException('Este comprobante tiene intentos de emisión registrados en ARCA: no se puede eliminar.');
     }
-    await this.prisma.comprobante.delete({ where: { tenantId_id: { tenantId, id } } });
+    // Los ítems importados que lo formaban vuelven a estar disponibles.
+    await this.prisma.$transaction(async (tx) => {
+      await this.items.liberar(tx, tenantId, id);
+      await tx.comprobante.delete({ where: { tenantId_id: { tenantId, id } } });
+    });
+  }
+
+  // ── Borradores desde ítems importados (ARCHITECTURE.md §8.2 paso 4) ──────
+
+  async generarDesdeItems(auth: AuthContext, dto: GenerarBorradoresDto) {
+    if (!dto.itemIds?.length && !dto.importacionId) throw new BadRequestException('Indicá los ítems o la importación a facturar.');
+    const items = await this.items.paraBorradores(auth.tenantId, { itemIds: dto.itemIds, importacionId: dto.importacionId });
+    if (dto.itemIds?.length && items.length !== new Set(dto.itemIds).size) {
+      throw new ConflictException(
+        'Algunos ítems no se pueden facturar: tienen errores, ya están en un borrador o su importación no está confirmada.',
+      );
+    }
+    if (!items.length) throw new BadRequestException('No hay ítems válidos para facturar (¿confirmaste la importación?).');
+
+    const emisor = await this.tenants.obtenerEmisor(auth.tenantId);
+    const pv = dto.puntoVentaId
+      ? await this.puntoVentaValido(auth.tenantId, dto.puntoVentaId, emisor.ambienteArca)
+      : await this.prisma.puntoVenta.findFirst({
+          where: { tenantId: auth.tenantId, ambiente: emisor.ambienteArca, activo: true },
+          orderBy: { numero: 'asc' },
+        });
+    if (!pv) throw new BadRequestException('No hay un punto de venta activo para el ambiente actual. Cargalo en Configuración.');
+    const fechaEmision = dto.fechaEmision ?? hoyArgentina();
+
+    const grupos = agruparItems(items, dto.agrupacion ?? 'cliente');
+    const clientes = new Map<string, Awaited<ReturnType<ClientesService['obtener']>>>();
+    for (const g of grupos) {
+      if (!clientes.has(g.clienteId)) clientes.set(g.clienteId, await this.clientes.obtener(auth.tenantId, g.clienteId));
+      if (g.items.length > 200) {
+        throw new BadRequestException(
+          `El cliente ${clientes.get(g.clienteId)?.razonSocial} tiene ${g.items.length} ítems: el máximo por comprobante es 200. Agrupá por período o elegí menos ítems.`,
+        );
+      }
+    }
+
+    const creados = await this.prisma.$transaction(
+      async (tx) => {
+        const ids: string[] = [];
+        for (const g of grupos) {
+          const cliente = clientes.get(g.clienteId)!;
+          const tipo = tipoComprobante(sugerirLetra(emisor.condicionIva, cliente.condicionIva), 'FACTURA');
+          const lineas: LineaDto[] = g.items.map((i) => ({
+            descripcion: i.descripcion,
+            cantidad: i.cantidad.toString(),
+            unidad: i.unidad,
+            precioUnitario: i.precioUnitario.toString(),
+            bonificacionPct: '0',
+            alicuotaIva: i.alicuotaIva.toString(),
+          }));
+          const calculo = this.calcular(lineas, TIPOS_COMPROBANTE[tipo].letra);
+          const fechas = fechasDeGrupo(g.items, fechaEmision, cliente.diasVencimiento);
+          const comprobante = await tx.comprobante.create({
+            data: {
+              tenantId: auth.tenantId,
+              tipo,
+              ambiente: emisor.ambienteArca,
+              clienteId: cliente.id,
+              puntoVentaId: pv.id,
+              fechaEmision: deYmdArca(fechaEmision),
+              concepto: fechas.concepto,
+              fechaServicioDesde: fecha(fechas.desde),
+              fechaServicioHasta: fecha(fechas.hasta),
+              fechaVtoPago: fecha(fechas.vtoPago),
+              moneda: g.moneda,
+              creadoPorId: auth.usuarioId ?? null,
+              ...calculo.totales,
+            },
+          });
+          await tx.comprobanteLinea.createMany({
+            data: calculo.lineas.map((l, n) => ({
+              ...l,
+              tenantId: auth.tenantId,
+              comprobanteId: comprobante.id,
+              itemFacturableId: g.items[n].id,
+            })),
+          });
+          if (calculo.alicuotas.length) {
+            await tx.comprobanteAlicuota.createMany({
+              data: calculo.alicuotas.map((a) => ({ ...a, tenantId: auth.tenantId, comprobanteId: comprobante.id })),
+            });
+          }
+          await this.items.asignarABorrador(tx, auth.tenantId, g.items.map((i) => i.id), comprobante.id);
+          ids.push(comprobante.id);
+        }
+        return ids;
+      },
+      { timeout: 60_000 },
+    );
+
+    const resumen = await this.prisma.comprobante.findMany({
+      where: { tenantId: auth.tenantId, id: { in: creados } },
+      select: { id: true, tipo: true, moneda: true, importeTotal: true, cliente: { select: { id: true, razonSocial: true } }, _count: { select: { lineas: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return { creados: resumen.length, items: items.length, comprobantes: resumen };
   }
 
   // ── Notas de crédito / débito ────────────────────────────────────────────

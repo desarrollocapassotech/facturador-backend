@@ -23,41 +23,41 @@ enum AmbienteArca {
 /// Código ARCA en comentario (CondicionIVAReceptorId / condición del emisor).
 enum CondicionIva {
   RESPONSABLE_INSCRIPTO // 1
-  EXENTO                // 4
-  CONSUMIDOR_FINAL      // 5
-  MONOTRIBUTO           // 6
-  NO_CATEGORIZADO       // 7
-  PROVEEDOR_EXTERIOR    // 8
-  CLIENTE_EXTERIOR      // 9
-  IVA_LIBERADO          // 10
-  MONOTRIBUTO_SOCIAL    // 13
-  NO_ALCANZADO          // 15
-  MONOTRIBUTO_TIP       // 16 Monotributista trabajador independiente promovido
+  EXENTO // 4
+  CONSUMIDOR_FINAL // 5
+  MONOTRIBUTO // 6
+  NO_CATEGORIZADO // 7
+  PROVEEDOR_EXTERIOR // 8
+  CLIENTE_EXTERIOR // 9
+  IVA_LIBERADO // 10
+  MONOTRIBUTO_SOCIAL // 13
+  NO_ALCANZADO // 15
+  MONOTRIBUTO_TIP // 16 Monotributista trabajador independiente promovido
 }
 
 enum TipoDocumento {
-  CUIT             // 80
-  CUIL             // 86
-  DNI              // 96
-  PASAPORTE        // 94
+  CUIT // 80
+  CUIL // 86
+  DNI // 96
+  PASAPORTE // 94
   CONSUMIDOR_FINAL // 99 (DocNro 0)
 }
 
 enum TipoComprobante {
-  FACTURA_A      // 1
-  NOTA_DEBITO_A  // 2
+  FACTURA_A // 1
+  NOTA_DEBITO_A // 2
   NOTA_CREDITO_A // 3
-  FACTURA_B      // 6
-  NOTA_DEBITO_B  // 7
+  FACTURA_B // 6
+  NOTA_DEBITO_B // 7
   NOTA_CREDITO_B // 8
-  FACTURA_C      // 11
-  NOTA_DEBITO_C  // 12
+  FACTURA_C // 11
+  NOTA_DEBITO_C // 12
   NOTA_CREDITO_C // 13
 }
 
 enum ConceptoArca {
-  PRODUCTOS             // 1
-  SERVICIOS             // 2 → exige FchServDesde/Hasta y FchVtoPago
+  PRODUCTOS // 1
+  SERVICIOS // 2 → exige FchServDesde/Hasta y FchVtoPago
   PRODUCTOS_Y_SERVICIOS // 3 → ídem
 }
 
@@ -67,12 +67,12 @@ enum Moneda {
 }
 
 enum EstadoComprobante {
-  BORRADOR               // editable; nada fue a ARCA
-  EMITIENDO              // bloqueado; hay una llamada a ARCA en curso
+  BORRADOR // editable; nada fue a ARCA
+  EMITIENDO // bloqueado; hay una llamada a ARCA en curso
   PENDIENTE_VERIFICACION // se cortó la comunicación; hay número reservado; se resuelve con FECompConsultar
-  EMITIDO                // tiene CAE
-  RECHAZADO              // ARCA rechazó o falló antes de enviar; vuelve a ser editable
-  ANULADO                // factura compensada totalmente por NC emitida
+  EMITIDO // tiene CAE
+  RECHAZADO // ARCA rechazó o falló antes de enviar; vuelve a ser editable
+  ANULADO // factura compensada totalmente por NC emitida
 }
 
 enum UnidadItem {
@@ -80,6 +80,29 @@ enum UnidadItem {
   UNIDAD
   SERVICIO
   MES
+}
+
+enum OrigenItem {
+  TRACKER
+  API
+  EXCEL
+  MANUAL
+}
+
+enum EstadoItem {
+  VALIDO // listo para agrupar en un borrador
+  CON_ERRORES // falta cliente, precio, etc. (ver `errores`)
+  DUPLICADO // otro ítem ya tiene la misma (origen, referenciaExterna) — solo en el resumen del lote
+  EN_BORRADOR // asignado a un comprobante en BORRADOR
+  FACTURADO // su comprobante fue EMITIDO
+  DESCARTADO // el usuario lo descartó
+}
+
+enum EstadoImportacion {
+  EN_STAGING
+  CONFIRMADA
+  DESCARTADA
+  FALLIDA
 }
 
 // ─────────────────────────────── Tenants ───────────────────────────────
@@ -99,15 +122,23 @@ model Tenant {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  usuarios     Usuario[]
-  puntosVenta  PuntoVenta[]
-  certificados CertificadoArca[]
-  plantillaPdf PlantillaPdf?
-  clientes     Cliente[]
-  comprobantes Comprobante[]
-  lineas       ComprobanteLinea[]
-  alicuotas    ComprobanteAlicuota[]
-  arcaLogs     ArcaLog[]
+  usuarios            Usuario[]
+  integraciones       Integracion[]
+  tokensAcceso        TokenAcceso[]
+  puntosVenta         PuntoVenta[]
+  certificados        CertificadoArca[]
+  plantillaPdf        PlantillaPdf?
+  conexionTracker     ConexionTracker?
+  clientes            Cliente[]
+  referenciasClientes ClienteReferenciaExterna[]
+  tarifas             Tarifa[]
+  plantillasMapeo     PlantillaMapeo[]
+  importaciones       Importacion[]
+  items               ItemFacturable[]
+  comprobantes        Comprobante[]
+  lineas              ComprobanteLinea[]
+  alicuotas           ComprobanteAlicuota[]
+  arcaLogs            ArcaLog[]
 
   @@map("tenants")
 }
@@ -164,6 +195,21 @@ model PlantillaPdf {
   @@map("plantillas_pdf")
 }
 
+/// URL y API key del time tracker del tenant. La key va cifrada (no hasheada) porque el
+/// Facturador tiene que enviarla en cada consulta (ARCHITECTURE.md §7.3).
+model ConexionTracker {
+  tenantId       String    @id
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  baseUrl        String // ej. https://tracker.example.com (sin barra final)
+  apiKeyCifrada  String // v1:iv:tag:cipher
+  apiKeyPista    String // últimos 4 caracteres, para mostrar
+  ultimaPruebaEn DateTime?
+  ultimoError    String?
+  updatedAt      DateTime  @updatedAt
+
+  @@map("conexiones_tracker")
+}
+
 // ─────────────────────────────── Auth ───────────────────────────────
 
 model Usuario {
@@ -180,10 +226,53 @@ model Usuario {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  tokensAcceso TokenAcceso[]
+
   @@unique([tenantId, id])
   @@unique([tenantId, email])
   @@index([email])
   @@map("usuarios")
+}
+
+/// Un sistema integrado (tracker, Vialto, …) con UNA API key vigente; rotar = crear otra y revocar esta.
+model Integracion {
+  id          String     @id @default(cuid())
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre      String
+  origen      OrigenItem @default(API) // origen con el que se registran sus ítems
+  keyPrefijo  String     @unique // parte pública, ej. "fct_7Hk2pQ9x" (para buscar y mostrar)
+  keyHash     String // SHA-256 (hex) de la clave completa
+  scopes      String[] // items:write, comprobantes:write, comprobantes:read, acceso:emitir
+  ultimoUsoEn DateTime?
+  revocadaEn  DateTime?
+  creadaPorId String?
+  createdAt   DateTime   @default(now())
+
+  tokensAcceso TokenAcceso[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@map("integraciones")
+}
+
+/// Token de un solo uso (60 s) para entrar al frontend desde un sistema integrado.
+model TokenAcceso {
+  id            String      @id @default(cuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integracionId String
+  integracion   Integracion @relation(fields: [tenantId, integracionId], references: [tenantId, id], onDelete: Cascade)
+  usuarioId     String
+  usuario       Usuario     @relation(fields: [tenantId, usuarioId], references: [tenantId, id], onDelete: Cascade)
+  tokenHash     String      @unique
+  destino       String? // path relativo validado, ej. "/importaciones"
+  expiraEn      DateTime
+  usadoEn       DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([expiraEn])
+  @@map("tokens_acceso")
 }
 
 // ─────────────────────────────── Clientes ───────────────────────────────
@@ -207,6 +296,9 @@ model Cliente {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
+  referencias  ClienteReferenciaExterna[]
+  tarifas      Tarifa[]
+  items        ItemFacturable[]
   comprobantes Comprobante[]
 
   @@unique([tenantId, id])
@@ -214,20 +306,158 @@ model Cliente {
   @@map("clientes")
 }
 
+/// Mapea el id de un cliente en un sistema externo (ej. clients.id del tracker) al Cliente del Facturador.
+model ClienteReferenciaExterna {
+  id                String     @id @default(cuid())
+  tenantId          String
+  tenant            Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clienteId         String
+  cliente           Cliente    @relation(fields: [tenantId, clienteId], references: [tenantId, id], onDelete: Cascade)
+  origen            OrigenItem
+  referenciaExterna String
+  createdAt         DateTime   @default(now())
+
+  @@unique([tenantId, origen, referenciaExterna])
+  @@map("clientes_referencias_externas")
+}
+
+/// Tarifa por cliente (y opcionalmente por proyecto/clave externa). La más específica vigente gana.
+model Tarifa {
+  id             String      @id @default(cuid())
+  tenantId       String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clienteId      String
+  cliente        Cliente     @relation(fields: [tenantId, clienteId], references: [tenantId, id], onDelete: Cascade)
+  origen         OrigenItem? // null = aplica a cualquier origen
+  claveExterna   String? // ej. id del proyecto en el tracker; null = todo el cliente
+  descripcion    String? // texto para la línea; admite {proyecto} y {periodo}
+  unidad         UnidadItem
+  precioUnitario Decimal     @db.Decimal(15, 4)
+  moneda         Moneda
+  alicuotaIva    Decimal     @db.Decimal(5, 2)
+  vigenteDesde   DateTime    @db.Date
+  vigenteHasta   DateTime?   @db.Date
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([tenantId, clienteId, vigenteDesde])
+  @@map("tarifas")
+}
+
+// ─────────────────────────────── Importaciones ───────────────────────────────
+
+model PlantillaMapeo {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre    String
+  formato   String // "xlsx" | "csv"
+  config    Json // PlantillaMapeoConfig (ARCHITECTURE.md §7.4)
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  importaciones Importacion[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, nombre])
+  @@map("plantillas_mapeo")
+}
+
+/// Un lote de ingreso (archivo, corrida del tracker, request de API, carga manual).
+model Importacion {
+  id               String            @id @default(cuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  origen           OrigenItem
+  estado           EstadoImportacion @default(EN_STAGING)
+  descripcion      String? // "Tracker 2026-09", nombre de archivo, etc.
+  archivoSha256    String? // detectar el mismo archivo subido dos veces
+  plantillaMapeoId String?
+  plantillaMapeo   PlantillaMapeo?   @relation(fields: [tenantId, plantillaMapeoId], references: [tenantId, id], onDelete: Restrict)
+  integracionId    String?
+  parametros       Json? // ej. { desde, hasta, baseHoras } para el tracker
+  advertencias     Json? // [{ referencia?, mensaje }] del adaptador
+  totalItems       Int               @default(0)
+  validos          Int               @default(0)
+  conErrores       Int               @default(0)
+  duplicados       Int               @default(0)
+  actualizados     Int               @default(0)
+  creadaPorId      String?
+  createdAt        DateTime          @default(now())
+  confirmadaEn     DateTime?
+
+  items ItemFacturable[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, createdAt])
+  @@map("importaciones")
+}
+
+/// Modelo canónico de entrada (ARCHITECTURE.md §6).
+model ItemFacturable {
+  id            String       @id @default(cuid())
+  tenantId      String
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  importacionId String?
+  importacion   Importacion? @relation(fields: [tenantId, importacionId], references: [tenantId, id], onDelete: Restrict)
+
+  origen            OrigenItem
+  referenciaExterna String // id en el sistema de origen; para MANUAL lo genera el frontend
+
+  // Cliente: resuelto (clienteId) o datos para resolverlo
+  clienteId                String?
+  cliente                  Cliente?       @relation(fields: [tenantId, clienteId], references: [tenantId, id], onDelete: Restrict)
+  clienteTipoDocumento     TipoDocumento?
+  clienteNumeroDocumento   String?
+  clienteReferenciaExterna String?
+  clienteAlta              Json? // datos sugeridos para crear el cliente si no existe
+
+  descripcion    String
+  cantidad       Decimal    @db.Decimal(15, 4)
+  unidad         UnidadItem
+  precioUnitario Decimal    @db.Decimal(15, 4)
+  moneda         Moneda     @default(ARS)
+  alicuotaIva    Decimal    @db.Decimal(5, 2)
+  fecha          DateTime?  @db.Date
+  periodoDesde   DateTime?  @db.Date
+  periodoHasta   DateTime?  @db.Date
+  metadatos      Json? // libre por fuente (proyecto, horas trabajadas y facturables, …)
+
+  estado        EstadoItem @default(VALIDO)
+  errores       Json? // [{ campo, mensaje }]
+  hashContenido String // detecta "misma referencia, contenido distinto"
+
+  comprobanteId String?
+  comprobante   Comprobante? @relation(fields: [tenantId, comprobanteId], references: [tenantId, id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lineas ComprobanteLinea[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, origen, referenciaExterna]) // idempotencia de importación
+  @@index([tenantId, estado])
+  @@index([tenantId, clienteId, estado])
+  @@index([tenantId, importacionId])
+  @@map("items_facturables")
+}
+
 // ─────────────────────────────── Comprobantes ───────────────────────────────
 
 model Comprobante {
-  id              String            @id @default(cuid())
-  tenantId        String
-  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  tipo            TipoComprobante
-  estado          EstadoComprobante @default(BORRADOR)
-  ambiente        AmbienteArca // snapshot del ambiente al crear/emitir
+  id       String            @id @default(cuid())
+  tenantId String
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tipo     TipoComprobante
+  estado   EstadoComprobante @default(BORRADOR)
+  ambiente AmbienteArca // snapshot del ambiente al crear/emitir
 
-  clienteId       String
-  cliente         Cliente           @relation(fields: [tenantId, clienteId], references: [tenantId, id], onDelete: Restrict)
-  puntoVentaId    String
-  puntoVenta      PuntoVenta        @relation(fields: [tenantId, puntoVentaId], references: [tenantId, id], onDelete: Restrict)
+  clienteId    String
+  cliente      Cliente    @relation(fields: [tenantId, clienteId], references: [tenantId, id], onDelete: Restrict)
+  puntoVentaId String
+  puntoVenta   PuntoVenta @relation(fields: [tenantId, puntoVentaId], references: [tenantId, id], onDelete: Restrict)
 
   // Numeración: se reserva justo antes de llamar a ARCA (ver ARCHITECTURE.md §8.3)
   numero          Int?
@@ -239,9 +469,9 @@ model Comprobante {
   fechaServicioHasta DateTime?    @db.Date
   fechaVtoPago       DateTime?    @db.Date
 
-  moneda             Moneda       @default(ARS)
-  cotizacion         Decimal      @default(1) @db.Decimal(15, 6)
-  cancelaMismaMoneda Boolean      @default(false) // CanMisMonExt, solo moneda extranjera
+  moneda             Moneda  @default(ARS)
+  cotizacion         Decimal @default(1) @db.Decimal(15, 6)
+  cancelaMismaMoneda Boolean @default(false) // CanMisMonExt, solo moneda extranjera
 
   importeNetoGravado Decimal @default(0) @db.Decimal(15, 2)
   importeNoGravado   Decimal @default(0) @db.Decimal(15, 2)
@@ -281,6 +511,7 @@ model Comprobante {
   lineas    ComprobanteLinea[]
   alicuotas ComprobanteAlicuota[]
   arcaLogs  ArcaLog[]
+  items     ItemFacturable[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, ambiente, puntoVentaId, tipo, numero]) // Postgres permite múltiples NULL
@@ -292,21 +523,23 @@ model Comprobante {
 }
 
 model ComprobanteLinea {
-  id              String      @id @default(cuid())
-  tenantId        String
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  comprobanteId   String
-  comprobante     Comprobante @relation(fields: [tenantId, comprobanteId], references: [tenantId, id], onDelete: Cascade)
-  orden           Int
-  descripcion     String
-  cantidad        Decimal     @db.Decimal(15, 4)
-  unidad          UnidadItem
-  precioUnitario  Decimal     @db.Decimal(15, 4)
-  bonificacionPct Decimal     @default(0) @db.Decimal(5, 2)
-  alicuotaIva     Decimal     @db.Decimal(5, 2) // 0, 2.5, 5, 10.5, 21, 27 (en C se guarda y no se discrimina)
-  importeNeto     Decimal     @db.Decimal(15, 2)
-  importeIva      Decimal     @db.Decimal(15, 2)
-  importeTotal    Decimal     @db.Decimal(15, 2)
+  id               String          @id @default(cuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  comprobanteId    String
+  comprobante      Comprobante     @relation(fields: [tenantId, comprobanteId], references: [tenantId, id], onDelete: Cascade)
+  orden            Int
+  descripcion      String
+  cantidad         Decimal         @db.Decimal(15, 4)
+  unidad           UnidadItem
+  precioUnitario   Decimal         @db.Decimal(15, 4)
+  bonificacionPct  Decimal         @default(0) @db.Decimal(5, 2)
+  alicuotaIva      Decimal         @db.Decimal(5, 2) // 0, 2.5, 5, 10.5, 21, 27 (en C se guarda y no se discrimina)
+  importeNeto      Decimal         @db.Decimal(15, 2)
+  importeIva       Decimal         @db.Decimal(15, 2)
+  importeTotal     Decimal         @db.Decimal(15, 2)
+  itemFacturableId String?
+  itemFacturable   ItemFacturable? @relation(fields: [tenantId, itemFacturableId], references: [tenantId, id], onDelete: Restrict)
 
   @@index([tenantId, comprobanteId])
   @@map("comprobante_lineas")

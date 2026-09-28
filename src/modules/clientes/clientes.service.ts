@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, type Cliente } from '@prisma/client';
+import { Prisma, type Cliente, type OrigenItem, type TipoDocumento } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { esCuitValido, normalizarCuit } from '../../shared/util/cuit';
 import { ARCA_GATEWAY, ArcaError, type ArcaGateway } from '../arca';
@@ -121,6 +121,59 @@ export class ClientesService {
       }
       throw err;
     }
+  }
+
+  // ── Resolución en lote (importaciones) ───────────────────────────────────
+
+  /** Ids que existen en el tenant (y están activos si `soloActivos`). */
+  async existentes(tenantId: string, ids: string[], soloActivos = false): Promise<Set<string>> {
+    if (!ids.length) return new Set();
+    const filas = await this.prisma.cliente.findMany({
+      where: { tenantId, id: { in: [...new Set(ids)] }, ...(soloActivos ? { activo: true } : {}) },
+      select: { id: true },
+    });
+    return new Set(filas.map((f) => f.id));
+  }
+
+  /** referenciaExterna (del sistema de origen) → clienteId. */
+  async porReferencias(tenantId: string, origen: OrigenItem, refs: string[]): Promise<Map<string, string>> {
+    if (!refs.length) return new Map();
+    const filas = await this.prisma.clienteReferenciaExterna.findMany({
+      where: { tenantId, origen, referenciaExterna: { in: [...new Set(refs)] } },
+      select: { referenciaExterna: true, clienteId: true },
+    });
+    return new Map(filas.map((f) => [f.referenciaExterna, f.clienteId]));
+  }
+
+  /**
+   * `${tipo}:${numero}` → clienteId, con el número normalizado. Un CUIT también encuentra
+   * al cliente cargado como CUIL con el mismo número (y al revés).
+   */
+  async porDocumentos(tenantId: string, docs: Array<{ tipo: TipoDocumento; numero: string }>): Promise<Map<string, string>> {
+    const normalizados = docs
+      .map((d) => ({ d, n: normalizarDocumento(d.tipo, d.numero) }))
+      .filter((x): x is { d: { tipo: TipoDocumento; numero: string }; n: { ok: true; numero: string } } => x.n.ok && x.d.tipo !== 'CONSUMIDOR_FINAL');
+    if (!normalizados.length) return new Map();
+    const filas = await this.prisma.cliente.findMany({
+      where: { tenantId, activo: true, numeroDocumento: { in: [...new Set(normalizados.map((x) => x.n.numero))] } },
+      select: { id: true, tipoDocumento: true, numeroDocumento: true },
+    });
+    const clave = (tipo: TipoDocumento) => (tipo === 'CUIL' ? 'CUIT' : tipo);
+    const mapa = new Map<string, string>();
+    for (const { d, n } of normalizados) {
+      const f = filas.find((x) => x.numeroDocumento === n.numero && clave(x.tipoDocumento) === clave(d.tipo));
+      if (f) mapa.set(`${d.tipo}:${d.numero}`, f.id);
+    }
+    return mapa;
+  }
+
+  /** Recuerda que la referencia externa corresponde a este cliente (para próximas importaciones). */
+  async vincularReferencia(tenantId: string, origen: OrigenItem, referenciaExterna: string, clienteId: string) {
+    await this.prisma.clienteReferenciaExterna.upsert({
+      where: { tenantId_origen_referenciaExterna: { tenantId, origen, referenciaExterna } },
+      create: { tenantId, origen, referenciaExterna, clienteId },
+      update: { clienteId },
+    });
   }
 
   private async guardar<T>(fn: () => Promise<T>): Promise<T> {

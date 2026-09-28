@@ -60,7 +60,18 @@ export class AuthService {
       });
     }
 
-    const usuario = coincidencias[0];
+    return this.sesionPara(coincidencias[0].tenantId, coincidencias[0].id);
+  }
+
+  /** Emite el JWT de sesión de un usuario activo (login con contraseña o canje de token de acceso). */
+  async sesionPara(tenantId: string, usuarioId: string): Promise<SesionResponse> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { tenantId_id: { tenantId, id: usuarioId } },
+      include: { tenant: { select: { id: true, slug: true, nombreFantasia: true, activo: true } } },
+    });
+    if (!usuario || !usuario.activo || !usuario.tenant.activo) {
+      throw new UnauthorizedException('El usuario no tiene acceso.');
+    }
     await this.prisma.usuario.update({
       where: { id: usuario.id },
       data: { ultimoAcceso: new Date() },

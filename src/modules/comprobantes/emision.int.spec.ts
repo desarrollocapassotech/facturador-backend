@@ -5,9 +5,11 @@
  */
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { cuitDePrueba } from '../../shared/testing/datos';
 import { ArcaError, type ArcaGateway, type CredencialesArca, type SolicitudCae } from '../arca';
 import type { AuthContext } from '../auth';
 import { ClientesService } from '../clientes';
+import { ItemsFacturablesService } from '../importaciones';
 import { TenantsService } from '../tenants';
 import type { CredencialesArcaProvider } from '../tenants';
 import { ComprobantesService } from './comprobantes.service';
@@ -72,7 +74,7 @@ const hayBase = Boolean(process.env.DATABASE_URL);
         slug: `test-emision-${sufijo}`,
         nombreFantasia: 'Test emisión',
         razonSocial: 'Test Emisión SA',
-        cuit: `3${String(Date.now()).slice(-10)}`, // único por corrida; no se valida acá
+        cuit: cuitDePrueba(),
         condicionIva: 'RESPONSABLE_INSCRIPTO',
         domicilioFiscal: 'Calle 1',
         inicioActividades: new Date('2020-01-01'),
@@ -99,8 +101,9 @@ const hayBase = Boolean(process.env.DATABASE_URL);
       }),
     } as unknown as CredencialesArcaProvider;
     const clientes = new ClientesService(prisma, cred, arca);
-    comprobantes = new ComprobantesService(prisma, clientes, tenants);
-    emision = new EmisionService(prisma, comprobantes, tenants, cred, arca);
+    const items = new ItemsFacturablesService(prisma);
+    comprobantes = new ComprobantesService(prisma, clientes, tenants, items);
+    emision = new EmisionService(prisma, comprobantes, tenants, cred, arca, items);
   });
 
   afterAll(async () => {

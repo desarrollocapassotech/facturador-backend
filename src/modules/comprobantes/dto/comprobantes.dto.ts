@@ -176,6 +176,31 @@ export class CrearNotaDto {
   motivo: string;
 }
 
+export class GenerarBorradoresDto {
+  @IsOptional()
+  @IsString({ each: true })
+  @ArrayMinSize(1)
+  @ArrayMaxSize(2000)
+  itemIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  importacionId?: string;
+
+  /** 'cliente': un borrador por cliente y moneda. 'cliente-periodo': además, uno por mes. */
+  @IsOptional()
+  @IsIn(['cliente', 'cliente-periodo'])
+  agrupacion?: 'cliente' | 'cliente-periodo';
+
+  @IsOptional()
+  @IsString()
+  puntoVentaId?: string;
+
+  @IsOptional()
+  @Matches(FECHA, { message: 'fechaEmision debe tener formato YYYY-MM-DD.' })
+  fechaEmision?: string;
+}
+
 export class ListarComprobantesQuery {
   @IsOptional()
   @IsEnum(EstadoComprobante)

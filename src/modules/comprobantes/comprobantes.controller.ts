@@ -21,6 +21,7 @@ import {
   CrearBorradorDto,
   CrearNotaDto,
   EmitirDto,
+  GenerarBorradoresDto,
   ListarComprobantesQuery,
 } from './dto/comprobantes.dto';
 import { EmisionService } from './emision.service';
@@ -41,6 +42,12 @@ export class ComprobantesController {
   @Post()
   crear(@CurrentAuth() auth: AuthContext, @Body() dto: CrearBorradorDto) {
     return this.comprobantes.crearBorrador(auth, dto);
+  }
+
+  /** Un borrador por cliente (y moneda / mes) a partir de ítems importados y confirmados. */
+  @Post('generar')
+  generar(@CurrentAuth() auth: AuthContext, @Body() dto: GenerarBorradoresDto) {
+    return this.comprobantes.generarDesdeItems(auth, dto);
   }
 
   @Get(':id')

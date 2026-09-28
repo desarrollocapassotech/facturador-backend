@@ -13,6 +13,7 @@ import Decimal from 'decimal.js';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { ARCA_GATEWAY, ArcaError, type ArcaGateway, type CredencialesArca, type SolicitudCae } from '../arca';
 import type { AuthContext } from '../auth';
+import { ItemsFacturablesService } from '../importaciones';
 import { CredencialesArcaProvider, TenantsService } from '../tenants';
 import { ComprobantesService, validarFechasServicio, type ComprobanteDetalle } from './comprobantes.service';
 import { CONCEPTO, CONDICION_IVA, MONEDA_ARCA, TIPOS_COMPROBANTE, TIPO_DOCUMENTO } from './domain/codigos';
@@ -61,6 +62,7 @@ export class EmisionService {
     private readonly tenants: TenantsService,
     private readonly credenciales: CredencialesArcaProvider,
     @Inject(ARCA_GATEWAY) private readonly arca: ArcaGateway,
+    private readonly items: ItemsFacturablesService,
   ) {}
 
   async emitir(auth: AuthContext, id: string, version: number, idempotencyKey: string) {
@@ -261,6 +263,7 @@ export class EmisionService {
     if (c.asociadoId && TIPOS_COMPROBANTE[c.tipo].clase === 'NOTA_CREDITO') {
       await this.actualizarAnulacion(tenantId, c.asociadoId);
     }
+    await this.items.marcarFacturados(tenantId, id);
   }
 
   /** Una factura queda ANULADA cuando sus NC emitidas cubren el total. */

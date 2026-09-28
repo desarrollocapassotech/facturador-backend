@@ -35,7 +35,7 @@ function crearPrismaFake(usuarios: UsuarioFake[]) {
         const u = usuarios.find(
           (x) => x.id === where.tenantId_id.id && x.tenantId === where.tenantId_id.tenantId,
         );
-        return u ? { id: u.id, activo: u.activo, tokenVersion: u.tokenVersion, tenant: { activo: u.tenant.activo } } : null;
+        return u ?? null;
       }),
     },
   } as unknown as PrismaService;
