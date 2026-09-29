@@ -109,7 +109,8 @@ export function agruparHoras(
         referenciaExterna: g.cliente.id,
         ...(cuit && cuit.length === 11 ? { tipoDocumento: 'CUIT' as const, numeroDocumento: cuit } : {}),
         alta: {
-          razonSocial: g.cliente.razonSocial?.trim() || g.cliente.name,
+          // En el tracker hay razones sociales cargadas como "-": en ese caso sirve más el nombre.
+          razonSocial: /[A-Za-z0-9]/.test(g.cliente.razonSocial ?? '') ? (g.cliente.razonSocial as string).trim() : g.cliente.name,
           condicionIva: condicionIvaDeTexto(g.cliente.ivaCondition),
         },
       },

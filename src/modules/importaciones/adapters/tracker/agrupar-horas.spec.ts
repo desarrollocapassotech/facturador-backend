@@ -94,6 +94,21 @@ describe('agruparHoras', () => {
     expect(items[0].cliente.referenciaExterna).toBe('cli-2');
   });
 
+  it('una razón social vacía o "-" usa el nombre del cliente', () => {
+    const { items } = agruparHoras([r({ client: { ...cliente, razonSocial: ' - ' } })], params());
+    expect(items[0].cliente.alta?.razonSocial).toBe('Acme');
+  });
+
+  it('suma registros con muchos decimales sin arrastrar redondeos', () => {
+    // 3 registros de 0.488333… h (como los manda el tracker con 6 decimales): total 1.465 → 1.46 si
+    // cada uno se hubiera redondeado a 4 decimales daba 1.4651 → 1.47.
+    const { items } = agruparHoras(
+      [r({ billableHours: '0.488333' }), r({ billableHours: '0.488333' }), r({ billableHours: '0.488333' })],
+      params(),
+    );
+    expect(items[0].cantidad).toBe('1.46');
+  });
+
   it('sin CUIT válido no manda documento, pero sí el alta sugerida', () => {
     const { items } = agruparHoras([r({ client: { ...cliente, cuit: '123', razonSocial: null } })], params());
     expect(items[0].cliente).toEqual({ referenciaExterna: 'cli-1', alta: { razonSocial: 'Acme', condicionIva: 'RESPONSABLE_INSCRIPTO' } });
