@@ -168,6 +168,21 @@ export class TenantsService {
   }
 
   /** Para el módulo arca: credenciales descifradas del ambiente actual (solo en memoria). */
+  /** Solo lo usa el pase a producción (módulo `produccion`), que valida antes todas las condiciones. */
+  async cambiarAmbiente(tenantId: string, ambiente: AmbienteArca): Promise<EmisorDatos> {
+    await this.prisma.tenant.update({ where: { id: tenantId }, data: { ambienteArca: ambiente } });
+    return this.obtenerEmisor(tenantId);
+  }
+
+  /** Metadatos del certificado activo de un ambiente (nunca el contenido). */
+  certificadoVigente(tenantId: string, ambiente: AmbienteArca) {
+    return this.prisma.certificadoArca.findFirst({
+      where: { tenantId, ambiente, activo: true },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, alias: true, huellaSha256: true, venceEl: true },
+    });
+  }
+
   async certificadoActivo(tenantId: string, ambiente: AmbienteArca): Promise<{ certPem: string; keyPem: string } | null> {
     const c = await this.prisma.certificadoArca.findFirst({
       where: { tenantId, ambiente, activo: true },

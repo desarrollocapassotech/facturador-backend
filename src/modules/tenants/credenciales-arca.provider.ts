@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { AmbienteArca } from '@prisma/client';
 import type { CredencialesArca } from '../arca';
 import { CUIT_PRUEBA_AFIPSDK, TenantsService } from './tenants.service';
 
@@ -14,11 +15,17 @@ export class CredencialesArcaProvider {
 
   async obtener(tenantId: string): Promise<CredencialesArca> {
     const emisor = await this.tenants.obtenerEmisor(tenantId);
-    const cert = await this.tenants.certificadoActivo(tenantId, emisor.ambienteArca);
-    const usaCuitPrueba = emisor.ambienteArca === 'HOMOLOGACION' && !cert;
+    return this.paraAmbiente(tenantId, emisor.ambienteArca);
+  }
+
+  /** Credenciales de un ambiente puntual (ej. probar producción antes de activarla). */
+  async paraAmbiente(tenantId: string, ambiente: AmbienteArca): Promise<CredencialesArca> {
+    const emisor = await this.tenants.obtenerEmisor(tenantId);
+    const cert = await this.tenants.certificadoActivo(tenantId, ambiente);
+    const usaCuitPrueba = ambiente === 'HOMOLOGACION' && !cert;
     return {
       tenantId,
-      ambiente: emisor.ambienteArca,
+      ambiente,
       cuit: usaCuitPrueba ? CUIT_PRUEBA_AFIPSDK : emisor.cuit,
       certPem: cert?.certPem ?? null,
       keyPem: cert?.keyPem ?? null,

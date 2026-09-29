@@ -40,5 +40,9 @@ jobs:
       - run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
       - run: npm run typecheck
       - run: npm run lint
+      # Límites entre módulos (ARCHITECTURE.md §4).
+      - run: npm run deps
       - run: npm test -- --ci
       - run: npm run build
+      # La documentación versionada tiene que coincidir con el código.
+      - run: node dist/generar-openapi.js && git diff --exit-code docs/openapi.json

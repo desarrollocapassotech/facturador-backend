@@ -22,7 +22,8 @@
     "crear-tenant": "ts-node scripts/crear-tenant.ts",
     "crear-usuario": "ts-node scripts/crear-usuario.ts",
     "postinstall": "prisma generate",
-    "openapi": "nest build && node dist/generar-openapi.js"
+    "openapi": "nest build && node dist/generar-openapi.js",
+    "deps": "depcruise src --config .dependency-cruiser.cjs"
   },
   "dependencies": {
     "@afipsdk/afip.js": "^1.2.3",
@@ -59,6 +60,7 @@
     "@types/node": "^22.13.9",
     "@types/pdfkit": "^0.17.6",
     "@types/qrcode": "^1.5.6",
+    "dependency-cruiser": "^16.10.4",
     "eslint": "^9.21.0",
     "jest": "^29.7.0",
     "prettier": "^3.5.3",
