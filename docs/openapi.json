@@ -3,9 +3,8 @@
   "paths": {
     "/api/v1/acceso/tokens": {
       "post": {
-        "operationId": "AccesoController_emitir",
-        "summary": "Pedir un token de acceso de un solo uso",
         "description": "Tu backend pide el token para el email del usuario (si no existe en el Facturador, se crea sin contraseña) y redirige al navegador a la `url` devuelta. Vale 60 s y se usa una vez. `destino` es una ruta interna del Facturador (ej. `/importaciones`). Scope `acceso:emitir`.",
+        "operationId": "AccesoController_emitir",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -35,9 +34,6 @@
                 }
               }
             }
-          },
-          "201": {
-            "description": ""
           }
         },
         "security": [
@@ -45,16 +41,17 @@
             "api-key": []
           }
         ],
+        "summary": "Pedir un token de acceso de un solo uso",
         "tags": [
+          "Acceso",
           "Acceso sin doble login"
         ]
       }
     },
     "/api/v1/items": {
       "post": {
-        "operationId": "V1Controller_cargarItems",
-        "summary": "Cargar ítems a facturar",
         "description": "Ingresa los ítems al staging (scope `items:write`). Es idempotente por `referenciaExterna`: reenviar un ítem igual no lo duplica y uno distinto lo actualiza (si todavía no se facturó). Cada ítem vuelve con su estado y sus errores.",
+        "operationId": "V1Controller_cargarItems",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -88,20 +85,27 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Cargar ítems a facturar",
+        "tags": [
+          "API pública"
         ]
       },
       "get": {
-        "operationId": "V1Controller_items",
-        "summary": "Consultar ítems por tu referencia",
         "description": "Hasta 200 referencias (`?referencia=a&referencia=b`). Scope `items:write`.",
-        "parameters": [],
+        "operationId": "V1Controller_items",
+        "parameters": [
+          {
+            "name": "referencia",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -117,20 +121,20 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Consultar ítems por tu referencia",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/importaciones/{id}": {
       "get": {
         "operationId": "V1Controller_importacion",
-        "summary": "Ver una importación y sus ítems",
         "parameters": [
           {
             "name": "id",
@@ -153,21 +157,21 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Ver una importación y sus ítems",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/importaciones/{id}/confirmar": {
       "post": {
-        "operationId": "V1Controller_confirmar",
-        "summary": "Confirmar una importación",
         "description": "Deja sus ítems válidos listos para generar borradores.",
+        "operationId": "V1Controller_confirmar",
         "parameters": [
           {
             "name": "id",
@@ -199,25 +203,25 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Confirmar una importación",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/clientes": {
       "get": {
-        "operationId": "V1Controller_buscarClientes",
-        "summary": "Buscar clientes por documento o nombre",
         "description": "Scope `items:write`.",
+        "operationId": "V1Controller_buscarClientes",
         "parameters": [
           {
             "name": "q",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "type": "string"
@@ -239,19 +243,19 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Buscar clientes por documento o nombre",
+        "tags": [
+          "API pública"
         ]
       },
       "post": {
-        "operationId": "V1Controller_crearCliente",
-        "summary": "Dar de alta un cliente",
         "description": "Valida el documento (dígito verificador del CUIT). `409` si ya existe. Scope `items:write`.",
+        "operationId": "V1Controller_crearCliente",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -283,33 +287,23 @@
                 }
               }
             }
-          },
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientePublicoDto"
-                }
-              }
-            }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Dar de alta un cliente",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/comprobantes/borradores": {
       "post": {
-        "operationId": "V1Controller_generar",
-        "summary": "Generar borradores desde ítems",
         "description": "Un borrador por cliente y moneda (o también por mes). Solo toma ítems VALIDO de importaciones confirmadas. La letra se sugiere según las condiciones de IVA. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_generar",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -341,39 +335,30 @@
                 }
               }
             }
-          },
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BorradoresGeneradosDto"
-                }
-              }
-            }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Generar borradores desde ítems",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/comprobantes": {
       "get": {
-        "operationId": "V1Controller_listar",
-        "summary": "Listar comprobantes",
         "description": "Scope `comprobantes:read`.",
+        "operationId": "V1Controller_listar",
         "parameters": [
           {
             "name": "estado",
             "required": false,
             "in": "query",
             "schema": {
+              "type": "string",
               "enum": [
                 "BORRADOR",
                 "EMITIENDO",
@@ -381,8 +366,7 @@
                 "EMITIDO",
                 "RECHAZADO",
                 "ANULADO"
-              ],
-              "type": "string"
+              ]
             }
           },
           {
@@ -425,21 +409,21 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Listar comprobantes",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/comprobantes/{id}": {
       "get": {
-        "operationId": "V1Controller_obtener",
-        "summary": "Ver un comprobante",
         "description": "Scope `comprobantes:read`.",
+        "operationId": "V1Controller_obtener",
         "parameters": [
           {
             "name": "id",
@@ -462,21 +446,21 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Ver un comprobante",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/comprobantes/{id}/emitir": {
       "post": {
-        "operationId": "V1Controller_emitir",
-        "summary": "Emitir un comprobante en ARCA",
         "description": "`Idempotency-Key` obligatoria: reintentar con la misma clave nunca emite dos veces. Responde EMITIDO, `422` si ARCA rechaza (con el motivo) o PENDIENTE_VERIFICACION si no se supo el resultado (se verifica solo; te llega el webhook). Scope `comprobantes:write`.",
+        "operationId": "V1Controller_emitir",
         "parameters": [
           {
             "name": "id",
@@ -518,21 +502,21 @@
             }
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Emitir un comprobante en ARCA",
+        "tags": [
+          "API pública"
         ]
       }
     },
     "/api/v1/comprobantes/{id}/pdf": {
       "get": {
-        "operationId": "V1Controller_descargarPdf",
-        "summary": "Descargar el PDF",
         "description": "Solo comprobantes con CAE. Scope `comprobantes:read`.",
+        "operationId": "V1Controller_descargarPdf",
         "parameters": [
           {
             "name": "id",
@@ -548,13 +532,14 @@
             "description": ""
           }
         },
-        "tags": [
-          "API pública"
-        ],
         "security": [
           {
             "api-key": []
           }
+        ],
+        "summary": "Descargar el PDF",
+        "tags": [
+          "API pública"
         ]
       }
     }
@@ -582,7 +567,8 @@
         "properties": {
           "email": {
             "type": "string",
-            "maxLength": 200
+            "maxLength": 200,
+            "format": "email"
           },
           "nombre": {
             "type": "string",
@@ -606,28 +592,53 @@
             "maxLength": 200
           },
           "tipoDocumento": {
-            "type": "object"
+            "enum": [
+              "CONSUMIDOR_FINAL",
+              "CUIT",
+              "CUIL",
+              "DNI",
+              "PASAPORTE"
+            ],
+            "type": "string"
           },
           "numeroDocumento": {
             "type": "string",
             "maxLength": 20
           },
           "condicionIva": {
-            "type": "object"
+            "enum": [
+              "RESPONSABLE_INSCRIPTO",
+              "EXENTO",
+              "CONSUMIDOR_FINAL",
+              "MONOTRIBUTO",
+              "NO_CATEGORIZADO",
+              "PROVEEDOR_EXTERIOR",
+              "CLIENTE_EXTERIOR",
+              "IVA_LIBERADO",
+              "MONOTRIBUTO_SOCIAL",
+              "NO_ALCANZADO",
+              "MONOTRIBUTO_TIP"
+            ],
+            "type": "string"
           },
           "domicilio": {
             "type": "string",
             "maxLength": 300
           },
           "email": {
-            "type": "string"
+            "type": "string",
+            "format": "email"
           },
           "pais": {
             "type": "string",
-            "pattern": "/^[A-Z]{2}$/"
+            "pattern": "^[A-Z]{2}$"
           },
           "monedaPreferida": {
-            "type": "object"
+            "enum": [
+              "ARS",
+              "USD"
+            ],
+            "type": "string"
           },
           "diasVencimiento": {
             "type": "number",
@@ -708,13 +719,11 @@
         "properties": {
           "desde": {
             "type": "string",
-            "description": "YYYY-MM-DD",
-            "pattern": "FECHA"
+            "description": "YYYY-MM-DD"
           },
           "hasta": {
             "type": "string",
-            "description": "YYYY-MM-DD",
-            "pattern": "FECHA"
+            "description": "YYYY-MM-DD"
           }
         },
         "required": [
@@ -783,6 +792,7 @@
           },
           "metadatos": {
             "type": "object",
+            "additionalProperties": true,
             "description": "Datos libres que querés conservar con el ítem (se devuelven tal cual)."
           }
         },
@@ -798,6 +808,8 @@
         "type": "object",
         "properties": {
           "items": {
+            "minItems": 1,
+            "maxItems": 1000,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ItemApiDto"
@@ -1021,6 +1033,7 @@
         "properties": {
           "itemIds": {
             "description": "Ids de ítems del Facturador.",
+            "maxItems": 2000,
             "type": "array",
             "items": {
               "type": "string"
@@ -1028,6 +1041,7 @@
           },
           "referencias": {
             "description": "O tus propias referencias (`referenciaExterna`) de los ítems.",
+            "maxItems": 2000,
             "type": "array",
             "items": {
               "type": "string"
@@ -1047,8 +1061,7 @@
           },
           "fechaEmision": {
             "type": "string",
-            "description": "YYYY-MM-DD; por defecto, hoy.",
-            "pattern": "FECHA"
+            "description": "YYYY-MM-DD; por defecto, hoy."
           }
         }
       },
@@ -1198,6 +1211,7 @@
           },
           "periodo": {
             "nullable": true,
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/PeriodoPublicoDto"
@@ -1237,6 +1251,7 @@
           "asociado": {
             "nullable": true,
             "description": "Factura asociada (solo notas de crédito o débito).",
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ComprobanteAsociadoDto"
@@ -1246,6 +1261,7 @@
           "error": {
             "nullable": true,
             "description": "Motivo del rechazo de ARCA o del estado pendiente.",
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ErrorComprobanteDto"

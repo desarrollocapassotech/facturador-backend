@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 import { AccesoService } from './acceso.service';
 import { AuthController } from './auth.controller';
 import { AuthGuard } from './auth.guard';
@@ -15,7 +15,11 @@ import { IntegracionesService } from './integraciones.service';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { algorithm: 'HS256', expiresIn: config.getOrThrow<string>('JWT_EXPIRES_IN') },
+        signOptions: {
+          algorithm: 'HS256',
+          // "8h", "30m"… (formato de `ms`); se valida al arrancar.
+          expiresIn: config.getOrThrow<string>('JWT_EXPIRES_IN') as NonNullable<JwtSignOptions['expiresIn']>,
+        },
       }),
     }),
   ],

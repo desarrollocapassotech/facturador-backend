@@ -5,9 +5,9 @@ Los pasos marcados **(ARCA)** o **(Render/Neon)** se hacen fuera del código, co
 
 ## 0. Antes de salir
 
-- [ ] **Actualizar NestJS 10 → 12.** `npm audit --omit=dev` marca vulnerabilidades altas que solo se resuelven así:
-  `multer` (DoS en subida de archivos), `lodash` y `js-yaml` (prototype pollution), `body-parser`. Hacerlo en una rama y
-  correr `npm test`, `npm run deps` y la prueba de punta a punta de `PLAN.md`.
+- [x] **NestJS actualizado a 11.2.6** (2026-09-29): resolvió multer, lodash, js-yaml y body-parser (18 → 5 avisos). Nest 12 es solo ESM; no hace falta para estos arreglos.
+  Quedan 5 avisos: `deepmerge-ts` (solo en el CLI de Prisma, al migrar; se va con Prisma 7) y `uuid` vía `exceljs`
+  (la función afectada, v3/v5/v6 con buffer, no se usa).
 - [ ] Guardar **`FACTURADOR_ENCRYPTION_KEY` de producción** en un gestor de secretos. Si se pierde, los certificados
   guardados no se pueden descifrar (hay que volver a cargarlos).
 - [ ] Revisar el costo de AfipSDK para producción (el uso de todos los tenants sale de la misma `AFIP_SDK_API_KEY`).
