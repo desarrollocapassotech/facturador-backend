@@ -11,6 +11,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22
+      - key: NODE_ENV # activa las restricciones de producción (webhooks solo https y sin IPs internas; tracker https)
+        value: production
       - key: DATABASE_URL # Neon rama production, con pooler
         sync: false
       - key: DIRECT_URL # Neon rama production, sin pooler

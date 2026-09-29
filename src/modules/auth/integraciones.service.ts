@@ -62,7 +62,16 @@ export class IntegracionesService {
     if (!prefijo) throw new UnauthorizedException(CLAVE_INVALIDA);
     const integracion = await this.prisma.integracion.findUnique({
       where: { keyPrefijo: prefijo },
-      select: { id: true, tenantId: true, keyHash: true, scopes: true, revocadaEn: true, ultimoUsoEn: true, tenant: { select: { activo: true } } },
+      select: {
+        id: true,
+        tenantId: true,
+        origen: true,
+        keyHash: true,
+        scopes: true,
+        revocadaEn: true,
+        ultimoUsoEn: true,
+        tenant: { select: { activo: true } },
+      },
     });
     // Se compara el hash aunque no exista, para no revelar por tiempo qué prefijos son válidos.
     const coincide = hashesIguales(sha256Hex(clave), integracion?.keyHash ?? sha256Hex(`${prefijo}-inexistente`));
@@ -72,6 +81,12 @@ export class IntegracionesService {
     if (!integracion.ultimoUsoEn || Date.now() - integracion.ultimoUsoEn.getTime() > UN_MINUTO) {
       await this.prisma.integracion.update({ where: { id: integracion.id }, data: { ultimoUsoEn: new Date() } });
     }
-    return { tenantId: integracion.tenantId, tipo: 'integracion', integracionId: integracion.id, scopes: integracion.scopes };
+    return {
+      tenantId: integracion.tenantId,
+      tipo: 'integracion',
+      integracionId: integracion.id,
+      origenIntegracion: integracion.origen,
+      scopes: integracion.scopes,
+    };
   }
 }

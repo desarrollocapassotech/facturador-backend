@@ -13,6 +13,6 @@ import { EmisionService } from './emision.service';
   imports: [ClientesModule, TenantsModule, ArcaModule, PdfModule, ImportacionesModule],
   controllers: [ComprobantesController],
   providers: [ComprobantesService, EmisionService, ComprobantePdfService],
-  exports: [ComprobantesService],
+  exports: [ComprobantesService, EmisionService, ComprobantePdfService],
 })
 export class ComprobantesModule {}

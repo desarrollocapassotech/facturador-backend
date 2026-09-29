@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { HealthController } from './health.controller';
+import { ApiPublicaModule } from './modules/api-publica';
 import { AuthModule } from './modules/auth';
 import { ClientesModule } from './modules/clientes';
 import { ComprobantesModule } from './modules/comprobantes';
@@ -18,6 +20,7 @@ import { PrismaModule } from './shared/prisma/prisma.module';
     // Límite por defecto generoso; el login define uno propio más estricto.
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 120 }]),
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     PrismaModule,
     AuthModule,
     TenantsModule,
@@ -25,6 +28,7 @@ import { PrismaModule } from './shared/prisma/prisma.module';
     ImportacionesModule,
     ComprobantesModule,
     RecibosModule,
+    ApiPublicaModule,
   ],
   controllers: [HealthController],
 })

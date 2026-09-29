@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AccesoService } from './acceso.service';
 import type { AuthContext } from './auth-context';
@@ -33,6 +34,14 @@ export class IntegracionesController {
 export class AccesoController {
   constructor(private readonly acceso: AccesoService) {}
 
+  @ApiTags('Acceso sin doble login')
+  @ApiSecurity('api-key')
+  @ApiOperation({
+    summary: 'Pedir un token de acceso de un solo uso',
+    description:
+      'Tu backend pide el token para el email del usuario (si no existe en el Facturador, se crea sin contraseña) y redirige al navegador a la `url` devuelta. Vale 60 s y se usa una vez. `destino` es una ruta interna del Facturador (ej. `/importaciones`). Scope `acceso:emitir`.',
+  })
+  @ApiOkResponse({ schema: { properties: { url: { type: 'string' }, expiraEn: { type: 'string', format: 'date-time' } } } })
   @ApiKey('acceso:emitir')
   @Post('v1/acceso/tokens')
   emitir(@CurrentAuth() auth: AuthContext, @Body() dto: EmitirTokenAccesoDto) {

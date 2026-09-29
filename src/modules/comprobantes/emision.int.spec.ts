@@ -3,6 +3,7 @@
  * Si no hay DATABASE_URL se saltea. Simula ARCA en memoria para provocar cortes de red
  * antes y después de que ARCA autorice, y verifica que nunca se dupliquen comprobantes.
  */
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { cuitDePrueba } from '../../shared/testing/datos';
@@ -103,7 +104,7 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     const clientes = new ClientesService(prisma, cred, arca);
     const items = new ItemsFacturablesService(prisma);
     comprobantes = new ComprobantesService(prisma, clientes, tenants, items);
-    emision = new EmisionService(prisma, comprobantes, tenants, cred, arca, items);
+    emision = new EmisionService(prisma, comprobantes, tenants, cred, arca, items, new EventEmitter2());
   });
 
   afterAll(async () => {

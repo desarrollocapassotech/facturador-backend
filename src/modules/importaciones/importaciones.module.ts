@@ -24,6 +24,6 @@ import { StagingService } from './staging.service';
     TrackerAdapter,
     ExcelCsvAdapter,
   ],
-  exports: [ItemsFacturablesService],
+  exports: [ItemsFacturablesService, ImportacionesService],
 })
 export class ImportacionesModule {}

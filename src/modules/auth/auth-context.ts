@@ -8,6 +8,8 @@ export interface AuthContext {
   tipo: 'usuario' | 'integracion';
   usuarioId?: string;
   integracionId?: string;
+  /** Solo integraciones: origen con el que se registran sus ítems (TRACKER, API, …). */
+  origenIntegracion?: 'TRACKER' | 'API' | 'EXCEL' | 'MANUAL';
   scopes: string[];
 }
 

@@ -46,6 +46,15 @@ export class ItemsFacturablesService {
     });
   }
 
+  /** Referencias externas de los ítems de un comprobante (para que el integrador sepa qué se facturó). */
+  async referenciasDeComprobante(tenantId: string, comprobanteId: string) {
+    return this.prisma.itemFacturable.findMany({
+      where: { tenantId, comprobanteId },
+      select: { id: true, origen: true, referenciaExterna: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   /** El comprobante se emitió: sus ítems quedan facturados. */
   async marcarFacturados(tenantId: string, comprobanteId: string) {
     await this.prisma.itemFacturable.updateMany({

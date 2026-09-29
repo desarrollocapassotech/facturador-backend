@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, type EstadoItem, type ItemFacturable } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Prisma, type EstadoItem, type ItemFacturable, type OrigenItem } from '@prisma/client';
 import Decimal from 'decimal.js';
+import { EVENTOS, type EventoImportacion } from '../../shared/eventos/eventos';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import type { AuthContext } from '../auth';
 import { ExcelCsvAdapter } from './adapters/excel/excel.adapter';
@@ -28,6 +30,7 @@ export class ImportacionesService {
     private readonly tracker: TrackerAdapter,
     private readonly excel: ExcelCsvAdapter,
     private readonly plantillas: PlantillasMapeoService,
+    private readonly eventos: EventEmitter2,
   ) {}
 
   // ── Consultas ────────────────────────────────────────────────────────────
@@ -125,7 +128,37 @@ export class ImportacionesService {
     });
     if (!count) await this.exigirEstado(tenantId, id, 'EN_STAGING');
     await this.recontar(tenantId, id);
+    this.eventos.emit(EVENTOS.IMPORTACION_CONFIRMADA, { tenantId, importacionId: id } satisfies EventoImportacion);
     return this.obtener(tenantId, id);
+  }
+
+  /**
+   * API pública (ApiAdapter): los ítems entran con el origen de la integración. Con
+   * `confirmar`, el lote queda listo para generar borradores en el mismo request.
+   */
+  async importarApi(auth: AuthContext, items: ItemFacturableInput[], opciones: { descripcion?: string; confirmar?: boolean }) {
+    const origen = auth.origenIntegracion ?? 'API';
+    const inputs = items.map((i) => ({ ...i, origen }));
+    const imp = await this.staging.ingresar(ctx(auth), origen, {
+      items: inputs,
+      advertencias: [],
+      descripcionLote: opciones.descripcion?.trim() || `API ${new Date().toISOString().slice(0, 10)}`,
+    });
+    if (opciones.confirmar) return this.confirmar(auth.tenantId, imp.id);
+    return this.obtener(auth.tenantId, imp.id);
+  }
+
+  /** Ítems de una importación con su estado (para la respuesta de la API). */
+  async itemsDe(tenantId: string, importacionId: string) {
+    return this.prisma.itemFacturable.findMany({ where: { tenantId, importacionId }, include: INCLUDE_ITEM, orderBy: { createdAt: 'asc' } });
+  }
+
+  /** Ítems por referencia del sistema de origen (el integrador consulta por sus propios ids). */
+  async itemsPorReferencia(tenantId: string, origen: OrigenItem, referencias: string[]) {
+    return this.prisma.itemFacturable.findMany({
+      where: { tenantId, origen, referenciaExterna: { in: referencias } },
+      include: INCLUDE_ITEM,
+    });
   }
 
   async descartar(tenantId: string, id: string) {

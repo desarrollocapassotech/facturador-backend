@@ -105,6 +105,12 @@ enum EstadoImportacion {
   FALLIDA
 }
 
+enum EstadoWebhookEntrega {
+  PENDIENTE
+  ENTREGADA
+  FALLIDA // agotó reintentos
+}
+
 // ─────────────────────────────── Tenants ───────────────────────────────
 
 model Tenant {
@@ -122,23 +128,26 @@ model Tenant {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  usuarios            Usuario[]
-  integraciones       Integracion[]
-  tokensAcceso        TokenAcceso[]
-  puntosVenta         PuntoVenta[]
-  certificados        CertificadoArca[]
-  plantillaPdf        PlantillaPdf?
-  conexionTracker     ConexionTracker?
-  clientes            Cliente[]
-  referenciasClientes ClienteReferenciaExterna[]
-  tarifas             Tarifa[]
-  plantillasMapeo     PlantillaMapeo[]
-  importaciones       Importacion[]
-  items               ItemFacturable[]
-  comprobantes        Comprobante[]
-  lineas              ComprobanteLinea[]
-  alicuotas           ComprobanteAlicuota[]
-  arcaLogs            ArcaLog[]
+  usuarios             Usuario[]
+  integraciones        Integracion[]
+  tokensAcceso         TokenAcceso[]
+  puntosVenta          PuntoVenta[]
+  certificados         CertificadoArca[]
+  plantillaPdf         PlantillaPdf?
+  conexionTracker      ConexionTracker?
+  clientes             Cliente[]
+  referenciasClientes  ClienteReferenciaExterna[]
+  tarifas              Tarifa[]
+  plantillasMapeo      PlantillaMapeo[]
+  importaciones        Importacion[]
+  items                ItemFacturable[]
+  comprobantes         Comprobante[]
+  lineas               ComprobanteLinea[]
+  alicuotas            ComprobanteAlicuota[]
+  arcaLogs             ArcaLog[]
+  solicitudesIdem      SolicitudIdempotente[]
+  webhookSuscripciones WebhookSuscripcion[]
+  webhookEntregas      WebhookEntrega[]
 
   @@map("tenants")
 }
@@ -249,11 +258,75 @@ model Integracion {
   creadaPorId String?
   createdAt   DateTime   @default(now())
 
-  tokensAcceso TokenAcceso[]
+  tokensAcceso         TokenAcceso[]
+  solicitudesIdem      SolicitudIdempotente[]
+  webhookSuscripciones WebhookSuscripcion[]
 
   @@unique([tenantId, id])
   @@index([tenantId])
   @@map("integraciones")
+}
+
+// ─────────────────────────────── API pública ───────────────────────────────
+
+/// Respuesta guardada por Idempotency-Key (24 h) para los POST de la API pública.
+model SolicitudIdempotente {
+  id            String      @id @default(cuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integracionId String
+  integracion   Integracion @relation(fields: [tenantId, integracionId], references: [tenantId, id], onDelete: Cascade)
+  clave         String
+  hashRequest   String // misma clave con otro request → 422
+  estadoHttp    Int? // null = en curso
+  respuesta     Json?
+  createdAt     DateTime    @default(now())
+  expiraEn      DateTime
+
+  @@unique([tenantId, integracionId, clave])
+  @@index([expiraEn])
+  @@map("solicitudes_idempotentes")
+}
+
+model WebhookSuscripcion {
+  id             String       @id @default(cuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integracionId  String?
+  integracion    Integracion? @relation(fields: [tenantId, integracionId], references: [tenantId, id], onDelete: Cascade)
+  url            String
+  eventos        String[] // comprobante.emitido, comprobante.rechazado, importacion.confirmada
+  secretoCifrado String // para firmar HMAC-SHA256; reversible porque hay que firmar con él
+  activa         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  entregas WebhookEntrega[]
+
+  @@unique([tenantId, id])
+  @@map("webhook_suscripciones")
+}
+
+model WebhookEntrega {
+  id             String               @id @default(cuid())
+  tenantId       String
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  suscripcionId  String
+  suscripcion    WebhookSuscripcion   @relation(fields: [tenantId, suscripcionId], references: [tenantId, id], onDelete: Cascade)
+  eventoId       String // id estable del evento: el receptor deduplica con esto
+  evento         String
+  payload        Json
+  estado         EstadoWebhookEntrega @default(PENDIENTE)
+  intentos       Int                  @default(0)
+  proximoIntento DateTime             @default(now())
+  ultimoStatus   Int?
+  ultimoError    String?
+  createdAt      DateTime             @default(now())
+  entregadaEn    DateTime?
+
+  @@unique([suscripcionId, eventoId])
+  @@index([estado, proximoIntento])
+  @@index([tenantId, suscripcionId, createdAt])
+  @@map("webhook_entregas")
 }
 
 /// Token de un solo uso (60 s) para entrar al frontend desde un sistema integrado.

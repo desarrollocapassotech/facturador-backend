@@ -77,6 +77,14 @@ Todos requieren sesión (Bearer) y operan sobre el tenant de la sesión.
 | POST | `/api/comprobantes/:id/notas` | `{ clase: NOTA_CREDITO \| NOTA_DEBITO, motivo }`: borrador de nota sobre una factura emitida, con su letra y sus líneas. Una NC por el total anula la factura al emitirse |
 | GET | `/api/comprobantes/:id/pdf` | PDF (solo con CAE). Original + duplicado según la plantilla; marca de agua en homologación |
 
+## API pública, webhooks y documentación (Fases 4 y 5)
+
+- **Documentación**: Swagger en `/api/docs` (y `/api/docs/openapi.json`). Copia versionada en [`docs/openapi.json`](docs/openapi.json): se regenera con `npm run openapi` (corre en modo preview, sin base).
+- **API pública** `/api/v1/*` (módulo `api-publica`): `X-Api-Key` con scopes (`items:write`, `comprobantes:write`, `comprobantes:read`, `acceso:emitir`). No acepta la sesión de un usuario. Carga de ítems (`POST /v1/items`, idempotente por `referenciaExterna`), confirmación, clientes, borradores (por ids, referencias o importación), emisión (`Idempotency-Key` obligatoria), consulta y PDF.
+- **Idempotencia**: `Idempotency-Key` en los POST → `SolicitudIdempotente` (24 h). Mismo request devuelve la respuesta guardada (`Idempotent-Replayed: true`); otro request con la misma clave da `422`; en curso da `409`. Los 5xx no se guardan.
+- **Webhooks** (`/api/configuracion/webhooks`, sesión de usuario): eventos `comprobante.emitido`, `comprobante.rechazado` e `importacion.confirmada`, emitidos con `@nestjs/event-emitter` (quien emite no conoce a `api-publica`). Firma `X-Facturador-Firma: t=…,v1=HMAC_SHA256(secreto, t + "." + cuerpo)`, secreto cifrado y mostrado una vez. Reintentos a 1 m, 5 m, 30 m, 2 h y 12 h (6 intentos) con un cron cada 30 s. En producción (`NODE_ENV=production`): solo https, sin direcciones internas (también se revisa el DNS al enviar), sin seguir redirecciones.
+- **Importaciones**, tarifas, conexión al tracker, API keys y token de acceso: ver `PLAN.md` (Fase 4).
+
 ## Endpoints (Fase 3)
 
 | Método | Ruta | Descripción |

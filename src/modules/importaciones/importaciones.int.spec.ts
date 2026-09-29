@@ -2,6 +2,7 @@
  * Integración del flujo importación → staging → borrador → emisión contra una base real
  * (DATABASE_URL ya migrada). Sin DATABASE_URL se saltea. ARCA y el tracker son falsos.
  */
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConflictException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../shared/prisma/prisma.service';
@@ -100,9 +101,9 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     const client = { obtenerHoras: async () => registros } as unknown as TrackerClient;
     const conexiones = { datos: async () => ({ baseUrl: 'http://tracker.test', apiKey: 'k' }) } as unknown as ConexionTrackerService;
     const plantillas = new PlantillasMapeoService(prisma);
-    importaciones = new ImportacionesService(prisma, staging, new TrackerAdapter(conexiones, client), new ExcelCsvAdapter(), plantillas);
+    importaciones = new ImportacionesService(prisma, staging, new TrackerAdapter(conexiones, client), new ExcelCsvAdapter(), plantillas, new EventEmitter2());
     comprobantes = new ComprobantesService(prisma, clientes, tenants, items);
-    emision = new EmisionService(prisma, comprobantes, tenants, cred, arca, items);
+    emision = new EmisionService(prisma, comprobantes, tenants, cred, arca, items, new EventEmitter2());
   });
 
   afterAll(async () => {

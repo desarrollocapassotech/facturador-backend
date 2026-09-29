@@ -6,10 +6,12 @@ import {
   Logger,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { createHash } from 'crypto';
 import Decimal from 'decimal.js';
+import { EVENTOS, type EventoComprobante } from '../../shared/eventos/eventos';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { ARCA_GATEWAY, ArcaError, type ArcaGateway, type CredencialesArca, type SolicitudCae } from '../arca';
 import type { AuthContext } from '../auth';
@@ -63,6 +65,7 @@ export class EmisionService {
     private readonly credenciales: CredencialesArcaProvider,
     @Inject(ARCA_GATEWAY) private readonly arca: ArcaGateway,
     private readonly items: ItemsFacturablesService,
+    private readonly eventos: EventEmitter2,
   ) {}
 
   async emitir(auth: AuthContext, id: string, version: number, idempotencyKey: string) {
@@ -264,6 +267,12 @@ export class EmisionService {
       await this.actualizarAnulacion(tenantId, c.asociadoId);
     }
     await this.items.marcarFacturados(tenantId, id);
+    this.eventos.emit(EVENTOS.COMPROBANTE_EMITIDO, { tenantId, comprobanteId: id } satisfies EventoComprobante);
+  }
+
+  private async avisarRechazo(tenantId: string, id: string) {
+    const { intentos } = await this.prisma.comprobante.findUniqueOrThrow({ where: { tenantId_id: { tenantId, id } }, select: { intentos: true } });
+    this.eventos.emit(EVENTOS.COMPROBANTE_RECHAZADO, { tenantId, comprobanteId: id, intento: intentos } satisfies EventoComprobante);
   }
 
   /** Una factura queda ANULADA cuando sus NC emitidas cubren el total. */
@@ -303,6 +312,7 @@ export class EmisionService {
             errorDetalle: arcaErr.detalle ?? null,
           },
     });
+    if (!incierto) await this.avisarRechazo(tenantId, id);
   }
 
   // ── Verificación de emisiones inciertas ─────────────────────────────────
@@ -350,6 +360,7 @@ export class EmisionService {
               errorDetalle: null,
             },
           });
+          await this.avisarRechazo(tenantId, id);
         }
       }
     } catch (err) {
@@ -376,6 +387,7 @@ export class EmisionService {
             ? { estado: 'PENDIENTE_VERIFICACION', errorMensaje: 'La emisión se interrumpió. Verificando con ARCA…' }
             : { estado: 'RECHAZADO', errorMensaje: 'La emisión se interrumpió antes de llegar a ARCA. Podés volver a emitir.' },
       });
+      if (c.numeroReservado === null) await this.avisarRechazo(c.tenantId, c.id);
     }
 
     const pendientes = await this.prisma.comprobante.findMany({

@@ -1,0 +1,1336 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/acceso/tokens": {
+      "post": {
+        "operationId": "AccesoController_emitir",
+        "summary": "Pedir un token de acceso de un solo uso",
+        "description": "Tu backend pide el token para el email del usuario (si no existe en el Facturador, se crea sin contraseña) y redirige al navegador a la `url` devuelta. Vale 60 s y se usa una vez. `destino` es una ruta interna del Facturador (ej. `/importaciones`). Scope `acceso:emitir`.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmitirTokenAccesoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "expiraEn": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "tags": [
+          "Acceso sin doble login"
+        ]
+      }
+    },
+    "/api/v1/items": {
+      "post": {
+        "operationId": "V1Controller_cargarItems",
+        "summary": "Cargar ítems a facturar",
+        "description": "Ingresa los ítems al staging (scope `items:write`). Es idempotente por `referenciaExterna`: reenviar un ítem igual no lo duplica y uno distinto lo actualiza (si todavía no se facturó). Cada ítem vuelve con su estado y sus errores.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional (obligatoria para emitir). 8 a 100 caracteres. Reintentar con la misma clave devuelve la misma respuesta durante 24 h.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CargarItemsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoCargaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "V1Controller_items",
+        "summary": "Consultar ítems por tu referencia",
+        "description": "Hasta 200 referencias (`?referencia=a&referencia=b`). Scope `items:write`.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ItemPublicoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/importaciones/{id}": {
+      "get": {
+        "operationId": "V1Controller_importacion",
+        "summary": "Ver una importación y sus ítems",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoCargaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/importaciones/{id}/confirmar": {
+      "post": {
+        "operationId": "V1Controller_confirmar",
+        "summary": "Confirmar una importación",
+        "description": "Deja sus ítems válidos listos para generar borradores.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional (obligatoria para emitir). 8 a 100 caracteres. Reintentar con la misma clave devuelve la misma respuesta durante 24 h.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoCargaDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/clientes": {
+      "get": {
+        "operationId": "V1Controller_buscarClientes",
+        "summary": "Buscar clientes por documento o nombre",
+        "description": "Scope `items:write`.",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientePublicoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "V1Controller_crearCliente",
+        "summary": "Dar de alta un cliente",
+        "description": "Valida el documento (dígito verificador del CUIT). `409` si ya existe. Scope `items:write`.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional (obligatoria para emitir). 8 a 100 caracteres. Reintentar con la misma clave devuelve la misma respuesta durante 24 h.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearClienteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientePublicoDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/comprobantes/borradores": {
+      "post": {
+        "operationId": "V1Controller_generar",
+        "summary": "Generar borradores desde ítems",
+        "description": "Un borrador por cliente y moneda (o también por mes). Solo toma ítems VALIDO de importaciones confirmadas. La letra se sugiere según las condiciones de IVA. Scope `comprobantes:write`.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional (obligatoria para emitir). 8 a 100 caracteres. Reintentar con la misma clave devuelve la misma respuesta durante 24 h.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerarBorradoresApiDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorradoresGeneradosDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorradoresGeneradosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/comprobantes": {
+      "get": {
+        "operationId": "V1Controller_listar",
+        "summary": "Listar comprobantes",
+        "description": "Scope `comprobantes:read`.",
+        "parameters": [
+          {
+            "name": "estado",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "BORRADOR",
+                "EMITIENDO",
+                "PENDIENTE_VERIFICACION",
+                "EMITIDO",
+                "RECHAZADO",
+                "ANULADO"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "clienteId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "porPagina",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobantesPaginadosDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/comprobantes/{id}": {
+      "get": {
+        "operationId": "V1Controller_obtener",
+        "summary": "Ver un comprobante",
+        "description": "Scope `comprobantes:read`.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobantePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/comprobantes/{id}/emitir": {
+      "post": {
+        "operationId": "V1Controller_emitir",
+        "summary": "Emitir un comprobante en ARCA",
+        "description": "`Idempotency-Key` obligatoria: reintentar con la misma clave nunca emite dos veces. Responde EMITIDO, `422` si ARCA rechaza (con el motivo) o PENDIENTE_VERIFICACION si no se supo el resultado (se verifica solo; te llega el webhook). Scope `comprobantes:write`.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Obligatoria. 8 a 100 caracteres (letras, números, - o _).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmitirApiDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobantePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/comprobantes/{id}/pdf": {
+      "get": {
+        "operationId": "V1Controller_descargarPdf",
+        "summary": "Descargar el PDF",
+        "description": "Solo comprobantes con CAE. Scope `comprobantes:read`.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "API pública"
+        ],
+        "security": [
+          {
+            "api-key": []
+          }
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Facturador — API pública",
+    "description": "\nAPI para que otros sistemas carguen lo que hay que facturar, generen borradores, emitan en ARCA y reciban avisos.\n\n## Autenticación\nHeader `X-Api-Key: fct_…`. Las claves se crean en **Configuración → Integraciones**, con estos permisos:\n`items:write` (cargar ítems y clientes), `comprobantes:write` (borradores y emisión), `comprobantes:read` (consultar y PDF)\ny `acceso:emitir` (token de acceso sin doble login). Las rutas de la API no aceptan la sesión de un usuario.\n\n## Idempotencia\nLos `POST` aceptan `Idempotency-Key` (8 a 100 caracteres: letras, números, `-` o `_`). Con la misma clave y el mismo\nrequest se devuelve la misma respuesta durante 24 h (header `Idempotent-Replayed: true`); con otro request, `422`;\nsi el primero sigue en curso, `409`. **Emitir la exige**: reintentar con la misma clave nunca emite dos veces.\n\nAdemás, los ítems son idempotentes por `referenciaExterna`: reenviar uno igual no lo duplica.\n\n## Flujo típico\n1. `POST /api/v1/items` con `confirmar: true`.\n2. `POST /api/v1/comprobantes/borradores` con tus `referencias`.\n3. `POST /api/v1/comprobantes/{id}/emitir` con `Idempotency-Key`.\n4. Recibís `comprobante.emitido` (o `comprobante.rechazado`) por webhook, y `GET …/pdf`.\n\n## Webhooks\nSe configuran en **Configuración → Webhooks**. Eventos: `comprobante.emitido`, `comprobante.rechazado`,\n`importacion.confirmada`. Cada entrega es un `POST` JSON:\n\n```json\n{ \"id\": \"evt_…\", \"evento\": \"comprobante.emitido\", \"creadoEn\": \"2026-09-29T12:00:00.000Z\",\n  \"datos\": { \"comprobante\": { … }, \"items\": [{ \"id\": \"…\", \"origen\": \"API\", \"referenciaExterna\": \"…\" }] } }\n```\n\nHeaders: `X-Facturador-Evento`, `X-Facturador-Evento-Id` (usalo para deduplicar: puede llegar más de una vez) y\n`X-Facturador-Firma: t=<unix>,v1=<hex>`, con `v1 = HMAC_SHA256(secreto, t + \".\" + cuerpo_crudo)`.\nRespondé `2xx` en menos de 10 s. Si no, se reintenta a los 1 m, 5 m, 30 m, 2 h y 12 h (6 intentos).\n\nVerificación en Node:\n```js\nconst { createHmac, timingSafeEqual } = require('crypto');\nfunction valido(secreto, cuerpoCrudo, cabecera) {\n  const { t, v1 } = Object.fromEntries(cabecera.split(',').map((p) => p.split('=')));\n  if (Math.abs(Date.now() / 1000 - Number(t)) > 300) return false; // evita replays\n  const esperado = createHmac('sha256', secreto).update(t + '.' + cuerpoCrudo).digest();\n  return esperado.length === 32 && timingSafeEqual(esperado, Buffer.from(v1, 'hex'));\n}\n```\n\n## Ambiente\nMientras la empresa esté en **homologación**, los comprobantes no tienen validez fiscal (campo `ambiente`).\n",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "api-key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key",
+        "description": "API key de la integración (fct_…)."
+      }
+    },
+    "schemas": {
+      "EmitirTokenAccesoDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "nombre": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "destino": {
+            "type": "string",
+            "description": "Path del frontend al que llevar después de entrar (lista blanca; si no es válido, se ignora).",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "CrearClienteDto": {
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "tipoDocumento": {
+            "type": "object"
+          },
+          "numeroDocumento": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "condicionIva": {
+            "type": "object"
+          },
+          "domicilio": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "email": {
+            "type": "string"
+          },
+          "pais": {
+            "type": "string",
+            "pattern": "/^[A-Z]{2}$/"
+          },
+          "monedaPreferida": {
+            "type": "object"
+          },
+          "diasVencimiento": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 365
+          }
+        },
+        "required": [
+          "razonSocial",
+          "tipoDocumento",
+          "numeroDocumento",
+          "condicionIva"
+        ]
+      },
+      "AltaClienteDto": {
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "type": "string",
+            "description": "Razón social para dar de alta al cliente si no existe (se ofrece en el staging).",
+            "maxLength": 200
+          },
+          "condicionIva": {
+            "type": "string",
+            "description": "RESPONSABLE_INSCRIPTO, MONOTRIBUTO, EXENTO, CONSUMIDOR_FINAL, …",
+            "maxLength": 40
+          },
+          "domicilio": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "razonSocial"
+        ]
+      },
+      "ClienteRefDto": {
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string",
+            "description": "Id del cliente en el Facturador.",
+            "maxLength": 50
+          },
+          "tipoDocumento": {
+            "type": "string",
+            "description": "Tipo de documento, si se identifica por documento.",
+            "enum": [
+              "CUIT",
+              "CUIL",
+              "DNI",
+              "PASAPORTE",
+              "CONSUMIDOR_FINAL"
+            ]
+          },
+          "numeroDocumento": {
+            "type": "string",
+            "description": "Número de documento (con o sin guiones).",
+            "maxLength": 20
+          },
+          "referenciaExterna": {
+            "type": "string",
+            "description": "Id del cliente en tu sistema. Se asocia al cliente del Facturador la primera vez que se resuelve.",
+            "maxLength": 200
+          },
+          "alta": {
+            "$ref": "#/components/schemas/AltaClienteDto"
+          }
+        }
+      },
+      "PeriodoDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "description": "YYYY-MM-DD",
+            "pattern": "FECHA"
+          },
+          "hasta": {
+            "type": "string",
+            "description": "YYYY-MM-DD",
+            "pattern": "FECHA"
+          }
+        },
+        "required": [
+          "desde",
+          "hasta"
+        ]
+      },
+      "ItemApiDto": {
+        "type": "object",
+        "properties": {
+          "referenciaExterna": {
+            "type": "string",
+            "description": "Id estable en tu sistema. Reenviar la misma referencia con los mismos datos no duplica; con datos distintos, actualiza.",
+            "maxLength": 200
+          },
+          "cliente": {
+            "$ref": "#/components/schemas/ClienteRefDto"
+          },
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "cantidad": {
+            "type": "string",
+            "description": "Decimal como string, con punto: \"10.5\".",
+            "maxLength": 30
+          },
+          "unidad": {
+            "type": "string",
+            "enum": [
+              "HORA",
+              "UNIDAD",
+              "SERVICIO",
+              "MES"
+            ]
+          },
+          "precioUnitario": {
+            "type": "string",
+            "description": "Sin IVA, decimal como string. Si falta, se toma de la tarifa vigente del cliente.",
+            "maxLength": 30
+          },
+          "moneda": {
+            "type": "string",
+            "enum": [
+              "ARS",
+              "USD"
+            ]
+          },
+          "alicuotaIva": {
+            "type": "string",
+            "description": "\"0\", \"2.5\", \"5\", \"10.5\", \"21\" o \"27\".",
+            "maxLength": 5
+          },
+          "fecha": {
+            "type": "string",
+            "description": "YYYY-MM-DD",
+            "maxLength": 10
+          },
+          "periodo": {
+            "description": "Período del servicio (ARCA lo exige para servicios; si no hay, se usa `fecha`).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PeriodoDto"
+              }
+            ]
+          },
+          "metadatos": {
+            "type": "object",
+            "description": "Datos libres que querés conservar con el ítem (se devuelven tal cual)."
+          }
+        },
+        "required": [
+          "referenciaExterna",
+          "cliente",
+          "descripcion",
+          "cantidad",
+          "unidad"
+        ]
+      },
+      "CargarItemsDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemApiDto"
+            }
+          },
+          "descripcion": {
+            "type": "string",
+            "description": "Texto para reconocer el lote en el Facturador.",
+            "maxLength": 200
+          },
+          "confirmar": {
+            "type": "boolean",
+            "description": "Confirmar el lote en el mismo request (deja los ítems válidos listos para facturar)."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "AdvertenciaDto": {
+        "type": "object",
+        "properties": {
+          "referencia": {
+            "type": "string",
+            "description": "Referencia del ítem al que se refiere, si aplica."
+          },
+          "mensaje": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mensaje"
+        ]
+      },
+      "ImportacionPublicaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "description": "EN_STAGING, CONFIRMADA o DESCARTADA."
+          },
+          "origen": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalItems": {
+            "type": "number"
+          },
+          "validos": {
+            "type": "number"
+          },
+          "conErrores": {
+            "type": "number"
+          },
+          "duplicados": {
+            "type": "number",
+            "description": "Reenviados sin cambios (idempotencia por referencia)."
+          },
+          "actualizados": {
+            "type": "number"
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdvertenciaDto"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "estado",
+          "origen",
+          "descripcion",
+          "totalItems",
+          "validos",
+          "conErrores",
+          "duplicados",
+          "actualizados",
+          "advertencias",
+          "createdAt"
+        ]
+      },
+      "ErrorItemDto": {
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "campo",
+          "mensaje"
+        ]
+      },
+      "ItemPublicoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "referenciaExterna": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "description": "VALIDO, CON_ERRORES, EN_BORRADOR, FACTURADO o DESCARTADO."
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorItemDto"
+            }
+          },
+          "clienteId": {
+            "type": "string",
+            "nullable": true
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "precioUnitario": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "alicuotaIva": {
+            "type": "string"
+          },
+          "comprobanteId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Comprobante al que pertenece (borrador o emitido)."
+          },
+          "importacionId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "referenciaExterna",
+          "estado",
+          "errores",
+          "clienteId",
+          "descripcion",
+          "cantidad",
+          "unidad",
+          "precioUnitario",
+          "moneda",
+          "alicuotaIva",
+          "comprobanteId",
+          "importacionId"
+        ]
+      },
+      "ResultadoCargaDto": {
+        "type": "object",
+        "properties": {
+          "importacion": {
+            "$ref": "#/components/schemas/ImportacionPublicaDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemPublicoDto"
+            }
+          }
+        },
+        "required": [
+          "importacion",
+          "items"
+        ]
+      },
+      "ClientePublicoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "razonSocial": {
+            "type": "string"
+          },
+          "tipoDocumento": {
+            "type": "string"
+          },
+          "numeroDocumento": {
+            "type": "string"
+          },
+          "condicionIva": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "razonSocial",
+          "tipoDocumento",
+          "numeroDocumento",
+          "condicionIva"
+        ]
+      },
+      "GenerarBorradoresApiDto": {
+        "type": "object",
+        "properties": {
+          "itemIds": {
+            "description": "Ids de ítems del Facturador.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "referencias": {
+            "description": "O tus propias referencias (`referenciaExterna`) de los ítems.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "importacionId": {
+            "type": "string",
+            "description": "O todos los ítems válidos de una importación confirmada."
+          },
+          "agrupacion": {
+            "type": "string",
+            "description": "`cliente`: un borrador por cliente y moneda. `cliente-periodo`: además, uno por mes.",
+            "enum": [
+              "cliente",
+              "cliente-periodo"
+            ]
+          },
+          "fechaEmision": {
+            "type": "string",
+            "description": "YYYY-MM-DD; por defecto, hoy.",
+            "pattern": "FECHA"
+          }
+        }
+      },
+      "PeriodoPublicoDto": {
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string"
+          },
+          "hasta": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "desde",
+          "hasta"
+        ]
+      },
+      "ImportesDto": {
+        "type": "object",
+        "properties": {
+          "netoGravado": {
+            "type": "string"
+          },
+          "iva": {
+            "type": "string"
+          },
+          "tributos": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "netoGravado",
+          "iva",
+          "tributos",
+          "total"
+        ]
+      },
+      "LineaPublicaDto": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "precioUnitario": {
+            "type": "string"
+          },
+          "alicuotaIva": {
+            "type": "string"
+          },
+          "importeNeto": {
+            "type": "string"
+          },
+          "importeTotal": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "descripcion",
+          "cantidad",
+          "unidad",
+          "precioUnitario",
+          "alicuotaIva",
+          "importeNeto",
+          "importeTotal"
+        ]
+      },
+      "ComprobanteAsociadoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "numero"
+        ]
+      },
+      "ErrorComprobanteDto": {
+        "type": "object",
+        "properties": {
+          "mensaje": {
+            "type": "string"
+          },
+          "detalle": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "mensaje",
+          "detalle"
+        ]
+      },
+      "ComprobantePublicoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "description": "FACTURA_A, NOTA_CREDITO_B, …"
+          },
+          "estado": {
+            "type": "string",
+            "description": "BORRADOR, EMITIENDO, PENDIENTE_VERIFICACION, EMITIDO, RECHAZADO o ANULADO."
+          },
+          "ambiente": {
+            "type": "string",
+            "description": "HOMOLOGACION (sin validez fiscal) o PRODUCCION."
+          },
+          "version": {
+            "type": "number",
+            "description": "Versión para el lock optimista al emitir."
+          },
+          "puntoVenta": {
+            "type": "number"
+          },
+          "numero": {
+            "type": "number",
+            "nullable": true
+          },
+          "fechaEmision": {
+            "type": "string"
+          },
+          "concepto": {
+            "type": "string"
+          },
+          "periodo": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PeriodoPublicoDto"
+              }
+            ]
+          },
+          "vencimientoPago": {
+            "type": "string",
+            "nullable": true
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "cotizacion": {
+            "type": "string"
+          },
+          "importes": {
+            "$ref": "#/components/schemas/ImportesDto"
+          },
+          "cae": {
+            "type": "string",
+            "nullable": true
+          },
+          "caeVencimiento": {
+            "type": "string",
+            "nullable": true
+          },
+          "cliente": {
+            "$ref": "#/components/schemas/ClientePublicoDto"
+          },
+          "lineas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaPublicaDto"
+            }
+          },
+          "asociado": {
+            "nullable": true,
+            "description": "Factura asociada (solo notas de crédito o débito).",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ComprobanteAsociadoDto"
+              }
+            ]
+          },
+          "error": {
+            "nullable": true,
+            "description": "Motivo del rechazo de ARCA o del estado pendiente.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ErrorComprobanteDto"
+              }
+            ]
+          },
+          "emitidoEn": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "estado",
+          "ambiente",
+          "version",
+          "puntoVenta",
+          "numero",
+          "fechaEmision",
+          "concepto",
+          "periodo",
+          "vencimientoPago",
+          "moneda",
+          "cotizacion",
+          "importes",
+          "cae",
+          "caeVencimiento",
+          "cliente",
+          "lineas",
+          "asociado",
+          "error",
+          "emitidoEn"
+        ]
+      },
+      "BorradoresGeneradosDto": {
+        "type": "object",
+        "properties": {
+          "comprobantes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComprobantePublicoDto"
+            }
+          }
+        },
+        "required": [
+          "comprobantes"
+        ]
+      },
+      "ComprobantesPaginadosDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "pagina": {
+            "type": "number"
+          },
+          "porPagina": {
+            "type": "number"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComprobantePublicoDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "pagina",
+          "porPagina",
+          "items"
+        ]
+      },
+      "EmitirApiDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "description": "Versión del comprobante que viste (lock optimista). Si se omite, se emite la versión actual.",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

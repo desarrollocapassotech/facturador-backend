@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
+import { configurarSwagger } from './swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -21,6 +22,7 @@ async function bootstrap() {
       .map((o) => o.trim()),
   });
   app.enableShutdownHooks();
+  configurarSwagger(app); // /api/docs (UI) y /api/docs/openapi.json
 
   const port = config.get<number>('PORT') ?? 3000;
   await app.listen(port);
