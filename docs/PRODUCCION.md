@@ -41,6 +41,10 @@ Verificar: `GET /api/health` responde y `/api/docs` muestra la documentación.
 
 ## 3. Tenant piloto y usuario
 
+Piloto: **Elias Nicolas Capasso**, CUIT 20-38442199-8, Monotributo (emite Factura C), French 94, General Ramirez,
+usuario `contacto@capasso.tech`. Ya está creado en Neon `develop` (slug `capasso`); en producción hay que crearlo con
+los mismos datos:
+
 ```bash
 DATABASE_URL=… npm run crear-tenant -- --slug <slug> --nombre "<Nombre>" \
   --razon-social "<Razón social>" --cuit <CUIT> --condicion-iva RESPONSABLE_INSCRIPTO --domicilio "<Domicilio fiscal>"
@@ -52,9 +56,9 @@ ingresos brutos) y hacer una factura de prueba en homologación.
 
 ## 4. Certificado de producción (ARCA)
 
-Con la clave fiscal del CUIT emisor:
+Con la clave fiscal del CUIT emisor. **Hay un asistente paso a paso en Configuración → Certificados ARCA** que genera la clave y el pedido (CSR) en el navegador, sin openssl (probado: el CSR verifica con openssl, y un certificado emitido desde él pasa la validación del backend).
 
-1. Generar la clave privada y el pedido de certificado (CSR). La clave privada **no se comparte** con nadie:
+1. Generar la clave privada y el pedido de certificado (CSR), con el asistente o con openssl. La clave privada **no se comparte** con nadie:
    ```bash
    openssl genrsa -out facturador.key 2048
    openssl req -new -key facturador.key -subj "/C=AR/O=<Razón social>/CN=facturador/serialNumber=CUIT <CUIT sin guiones>" -out facturador.csr
@@ -63,8 +67,9 @@ Con la clave fiscal del CUIT emisor:
    descargar el certificado (`.crt`).
 3. ARCA → **Administrador de Relaciones de Clave Fiscal** → nueva relación → servicio **Facturación Electrónica**
    (`wsfe`) → representante: el certificado `facturador`.
-4. ARCA → **Administración de Puntos de Venta y Domicilios** → alta de un punto de venta **RECE / Factura
-   Electrónica - Monotributo / Responsable Inscripto Web Services** (no sirve uno de "Comprobantes en línea").
+4. ARCA → **Administración de Puntos de Venta y Domicilios** → alta de un punto de venta **Factura Electrónica -
+   Monotributo - Web Services** (monotributistas) o **RECE para aplicativo y web services** (responsables inscriptos).
+   No sirve uno de "Comprobantes en línea".
 
 ## 5. Configuración en el Facturador
 
