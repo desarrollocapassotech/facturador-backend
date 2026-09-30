@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -16,23 +18,40 @@ import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiProduces, ApiSecuri
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { ApiKey, CurrentAuth, type AuthContext } from '../auth';
-import { ClientesService, CrearClienteDto } from '../clientes';
-import { ComprobantePdfService, ComprobantesService, EmisionService } from '../comprobantes';
+import { ActualizarClienteDto, ClientesService, CrearClienteDto } from '../clientes';
+import {
+  ActualizarBorradorDto,
+  ComprobantePdfService,
+  ComprobantesService,
+  CrearBorradorDto,
+  CrearNotaDto,
+  EmisionService,
+} from '../comprobantes';
 import { ImportacionesService, type ItemFacturableInput } from '../importaciones';
+import { TenantsService } from '../tenants';
 import {
   BorradoresGeneradosDto,
   CargarItemsDto,
   ClientePublicoDto,
   ComprobantePublicoDto,
   ComprobantesPaginadosDto,
+  ConfiguracionPublicaDto,
   EmitirApiDto,
   GenerarBorradoresApiDto,
   ItemPublicoDto,
   ListarComprobantesApiQuery,
+  PadronDto,
   ResultadoCargaDto,
 } from './dto/api-publica.dto';
 import { Idempotente, IdempotenciaInterceptor } from './idempotencia/idempotencia.interceptor';
-import { clientePublico, comprobantePublico, importacionPublica, itemPublico, type ComprobanteInterno } from './representaciones';
+import {
+  clientePublico,
+  comprobantePublico,
+  configuracionPublica,
+  importacionPublica,
+  itemPublico,
+  type ComprobanteInterno,
+} from './representaciones';
 
 const CLAVE_IDEMPOTENCIA = {
   name: 'Idempotency-Key',
@@ -40,11 +59,18 @@ const CLAVE_IDEMPOTENCIA = {
   description: 'Opcional (obligatoria para emitir). 8 a 100 caracteres. Reintentar con la misma clave devuelve la misma respuesta durante 24 h.',
 };
 
+const USUARIO = {
+  name: 'X-Usuario-Email',
+  required: false,
+  description: 'Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.',
+};
+
 const comprobante = (c: unknown) => comprobantePublico(c as ComprobanteInterno);
 
 /** API pública para sistemas integrados: todas las rutas exigen `X-Api-Key` con el scope indicado. */
 @ApiTags('API pública')
 @ApiSecurity('api-key')
+@ApiHeader(USUARIO)
 @UseGuards(ThrottlerGuard)
 @Throttle({ default: { limit: 300, ttl: 60_000 } })
 @UseInterceptors(IdempotenciaInterceptor)
@@ -56,7 +82,22 @@ export class V1Controller {
     private readonly emision: EmisionService,
     private readonly pdf: ComprobantePdfService,
     private readonly clientes: ClientesService,
+    private readonly tenants: TenantsService,
   ) {}
+
+  // ── Configuración (solo lectura) ─────────────────────────────────────────
+
+  @ApiOperation({
+    summary: 'Ver emisor y puntos de venta',
+    description: 'Datos para armar comprobantes. La configuración se edita solo desde el Facturador. Scope `comprobantes:read`.',
+  })
+  @ApiOkResponse({ type: ConfiguracionPublicaDto })
+  @ApiKey('comprobantes:read')
+  @Get('configuracion')
+  async configuracion(@CurrentAuth() auth: AuthContext): Promise<ConfiguracionPublicaDto> {
+    const [emisor, puntosVenta] = await Promise.all([this.tenants.obtenerEmisor(auth.tenantId), this.tenants.listarPuntosVenta(auth.tenantId)]);
+    return configuracionPublica({ emisor, puntosVenta });
+  }
 
   // ── Ítems ────────────────────────────────────────────────────────────────
 
@@ -115,13 +156,31 @@ export class V1Controller {
 
   // ── Clientes ─────────────────────────────────────────────────────────────
 
-  @ApiOperation({ summary: 'Buscar clientes por documento o nombre', description: 'Scope `items:write`.' })
+  @ApiOperation({ summary: 'Listar o buscar clientes', description: 'Activos, por documento o nombre (`?q=`), hasta 200. Scope `items:write`.' })
   @ApiOkResponse({ type: [ClientePublicoDto] })
   @ApiKey('items:write')
   @Get('clientes')
   async buscarClientes(@CurrentAuth() auth: AuthContext, @Query('q') q?: string): Promise<ClientePublicoDto[]> {
-    if (!q?.trim()) throw new BadRequestException('Indicá qué buscar (?q=CUIT o nombre).');
-    return (await this.clientes.listar(auth.tenantId, { q })).map(clientePublico);
+    return (await this.clientes.listar(auth.tenantId, { q: q?.slice(0, 100) })).map(clientePublico);
+  }
+
+  @ApiOperation({
+    summary: 'Consultar un CUIT en el padrón de ARCA',
+    description: 'Razón social, domicilio y condición de IVA para dar de alta al cliente. No guarda nada. Scope `items:write`.',
+  })
+  @ApiOkResponse({ type: PadronDto })
+  @ApiKey('items:write')
+  @Get('clientes/padron/:cuit')
+  padron(@CurrentAuth() auth: AuthContext, @Param('cuit') cuit: string): Promise<PadronDto> {
+    return this.clientes.consultarPadron(auth.tenantId, cuit);
+  }
+
+  @ApiOperation({ summary: 'Ver un cliente', description: 'Scope `items:write`.' })
+  @ApiOkResponse({ type: ClientePublicoDto })
+  @ApiKey('items:write')
+  @Get('clientes/:id')
+  async cliente(@CurrentAuth() auth: AuthContext, @Param('id') id: string): Promise<ClientePublicoDto> {
+    return clientePublico(await this.clientes.obtener(auth.tenantId, id));
   }
 
   @ApiOperation({ summary: 'Dar de alta un cliente', description: 'Valida el documento (dígito verificador del CUIT). `409` si ya existe. Scope `items:write`.' })
@@ -134,7 +193,29 @@ export class V1Controller {
     return clientePublico(await this.clientes.crear(auth.tenantId, dto));
   }
 
+  @ApiOperation({ summary: 'Modificar un cliente', description: 'Scope `items:write`.' })
+  @ApiOkResponse({ type: ClientePublicoDto })
+  @ApiKey('items:write')
+  @Patch('clientes/:id')
+  async actualizarCliente(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @Body() dto: ActualizarClienteDto): Promise<ClientePublicoDto> {
+    return clientePublico(await this.clientes.actualizar(auth.tenantId, id, dto));
+  }
+
   // ── Comprobantes ─────────────────────────────────────────────────────────
+
+  @ApiOperation({
+    summary: 'Crear un borrador a mano',
+    description:
+      'Factura con sus líneas (precios sin IVA). Si se omite `tipo`, se usa la letra que corresponde al emisor y al cliente. `puntoVentaId` sale de `GET /configuracion`. Scope `comprobantes:write`.',
+  })
+  @ApiHeader(CLAVE_IDEMPOTENCIA)
+  @ApiOkResponse({ type: ComprobantePublicoDto })
+  @ApiKey('comprobantes:write')
+  @Idempotente()
+  @Post('comprobantes')
+  async crearBorrador(@CurrentAuth() auth: AuthContext, @Body() dto: CrearBorradorDto): Promise<ComprobantePublicoDto> {
+    return comprobante(await this.comprobantes.crearBorrador(auth, dto));
+  }
 
   @ApiOperation({
     summary: 'Generar borradores desde ítems',
@@ -180,6 +261,56 @@ export class V1Controller {
   @Get('comprobantes/:id')
   async obtener(@CurrentAuth() auth: AuthContext, @Param('id') id: string): Promise<ComprobantePublicoDto> {
     return comprobante(await this.comprobantes.obtener(auth.tenantId, id));
+  }
+
+  @ApiOperation({
+    summary: 'Modificar un borrador',
+    description:
+      'Solo borradores o rechazados. `version` es obligatoria (lock optimista: `409` si cambió). Mandar `lineas` las reemplaza todas. Scope `comprobantes:write`.',
+  })
+  @ApiOkResponse({ type: ComprobantePublicoDto })
+  @ApiKey('comprobantes:write')
+  @Patch('comprobantes/:id')
+  async actualizarBorrador(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @Body() dto: ActualizarBorradorDto): Promise<ComprobantePublicoDto> {
+    return comprobante(await this.comprobantes.actualizarBorrador(auth, id, dto));
+  }
+
+  @ApiOperation({
+    summary: 'Eliminar un borrador',
+    description: 'Solo borradores que nunca llegaron a ARCA. Sus ítems vuelven a estar disponibles para facturar. Scope `comprobantes:write`.',
+  })
+  @ApiKey('comprobantes:write')
+  @Delete('comprobantes/:id')
+  @HttpCode(204)
+  async eliminarBorrador(@CurrentAuth() auth: AuthContext, @Param('id') id: string): Promise<void> {
+    await this.comprobantes.eliminar(auth.tenantId, id);
+  }
+
+  @ApiOperation({
+    summary: 'Crear una nota de crédito o débito',
+    description:
+      'Sobre una factura emitida: crea el borrador de la nota con las mismas líneas (editables), asociado a la factura. Después se emite como cualquier comprobante. Scope `comprobantes:write`.',
+  })
+  @ApiHeader(CLAVE_IDEMPOTENCIA)
+  @ApiOkResponse({ type: ComprobantePublicoDto })
+  @ApiKey('comprobantes:write')
+  @Idempotente()
+  @Post('comprobantes/:id/notas')
+  async crearNota(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @Body() dto: CrearNotaDto): Promise<ComprobantePublicoDto> {
+    return comprobante(await this.comprobantes.crearNota(auth, id, dto));
+  }
+
+  @ApiOperation({
+    summary: 'Verificar un comprobante pendiente',
+    description:
+      'Consulta en ARCA un comprobante PENDIENTE_VERIFICACION (también se hace solo, cada pocos minutos). En otro estado lo devuelve igual. Scope `comprobantes:write`.',
+  })
+  @ApiOkResponse({ type: ComprobantePublicoDto })
+  @ApiKey('comprobantes:write')
+  @Post('comprobantes/:id/verificar')
+  @HttpCode(200)
+  async verificar(@CurrentAuth() auth: AuthContext, @Param('id') id: string): Promise<ComprobantePublicoDto> {
+    return comprobante(await this.emision.verificar(auth.tenantId, id));
   }
 
   @ApiOperation({

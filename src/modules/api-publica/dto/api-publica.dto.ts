@@ -287,6 +287,39 @@ export class ClientePublicoDto {
   tipoDocumento: string;
   numeroDocumento: string;
   condicionIva: string;
+  domicilio: string | null;
+  email: string | null;
+}
+
+export class PadronDto {
+  cuit: string;
+  razonSocial: string;
+  domicilio: string | null;
+  /** Condición de IVA según ARCA, lista para dar de alta al cliente. */
+  condicionIva: string | null;
+  /** Ambiente de ARCA en el que se consultó. */
+  ambiente: string;
+}
+
+export class EmisorPublicoDto {
+  razonSocial: string;
+  nombreFantasia: string;
+  cuit: string;
+  condicionIva: string;
+  /** HOMOLOGACION (sin validez fiscal) o PRODUCCION. */
+  ambiente: string;
+}
+
+export class PuntoVentaPublicoDto {
+  id: string;
+  numero: number;
+  descripcion: string | null;
+}
+
+export class ConfiguracionPublicaDto {
+  emisor: EmisorPublicoDto;
+  /** Puntos de venta activos del ambiente actual (para `puntoVentaId` al crear un borrador). */
+  puntosVenta: PuntoVentaPublicoDto[];
 }
 
 export class LineaPublicaDto {
@@ -294,6 +327,7 @@ export class LineaPublicaDto {
   cantidad: string;
   unidad: string;
   precioUnitario: string;
+  bonificacionPct: string;
   alicuotaIva: string;
   importeNeto: string;
   importeTotal: string;
@@ -310,6 +344,13 @@ export class ComprobanteAsociadoDto {
   id: string;
   tipo: string;
   numero: number | null;
+}
+
+export class NotaAsociadaDto {
+  id: string;
+  tipo: string;
+  numero: number | null;
+  estado: string;
 }
 
 export class ErrorComprobanteDto {
@@ -333,6 +374,7 @@ export class ComprobantePublicoDto {
   /** Versión para el lock optimista al emitir. */
   version: number;
   puntoVenta: number;
+  puntoVentaId: string | null;
   numero: number | null;
   fechaEmision: string;
   concepto: string;
@@ -347,6 +389,11 @@ export class ComprobantePublicoDto {
   lineas: LineaPublicaDto[];
   /** Factura asociada (solo notas de crédito o débito). */
   asociado: ComprobanteAsociadoDto | null;
+  /** Notas de crédito o débito hechas sobre esta factura. */
+  notas: NotaAsociadaDto[];
+  observaciones: string | null;
+  /** Aviso si la letra elegida no es la habitual para el emisor y el cliente. */
+  advertenciaLetra: string | null;
   /** Motivo del rechazo de ARCA o del estado pendiente. */
   error: ErrorComprobanteDto | null;
   emitidoEn: string | null;

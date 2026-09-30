@@ -181,6 +181,13 @@ const hayBase = Boolean(process.env.DATABASE_URL);
       ['POST', `/v1/importaciones/${a.importacion}/confirmar`],
       ['POST', '/v1/comprobantes/borradores', { itemIds: [a.item] }],
       ['POST', '/v1/comprobantes/borradores', { referencias: ['ref-a'] }],
+      ['PATCH', `/v1/comprobantes/${a.comprobante}`, { version: 0, observaciones: 'x' }],
+      ['DELETE', `/v1/comprobantes/${a.comprobante}`],
+      ['POST', `/v1/comprobantes/${a.comprobante}/notas`, { clase: 'NOTA_CREDITO', motivo: 'x' }],
+      ['POST', `/v1/comprobantes/${a.comprobante}/verificar`],
+      ['POST', '/v1/comprobantes', { clienteId: a.cliente, puntoVentaId: a.puntoVenta, fechaEmision: '2026-09-29', concepto: 'PRODUCTOS', lineas: [{ descripcion: 'x', cantidad: '1', unidad: 'UNIDAD', precioUnitario: '1', alicuotaIva: '21' }] }],
+      ['GET', `/v1/clientes/${a.cliente}`],
+      ['PATCH', `/v1/clientes/${a.cliente}`, { razonSocial: 'Hackeado' }],
     ];
     const pasaron: string[] = [];
     for (const [metodo, ruta, body] of intentos) {
@@ -199,8 +206,11 @@ const hayBase = Boolean(process.env.DATABASE_URL);
       expect(r.status).toBe(200);
       if (idsA.some((id) => r.body.includes(id))) filtrados.push(ruta);
     }
-    const v1 = await http('GET', '/v1/items?referencia=ref-a', { key: keyB });
-    if (v1.body.includes(a.item)) filtrados.push('/v1/items');
+    for (const ruta of ['/v1/items?referencia=ref-a', '/v1/clientes', '/v1/comprobantes', '/v1/configuracion']) {
+      const v1 = await http('GET', ruta, { key: keyB });
+      expect(v1.status).toBe(200);
+      if (idsA.some((id) => v1.body.includes(id))) filtrados.push(ruta);
+    }
     expect(filtrados).toEqual([]);
   });
 

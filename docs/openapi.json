@@ -48,11 +48,58 @@
         ]
       }
     },
+    "/api/v1/configuracion": {
+      "get": {
+        "description": "Datos para armar comprobantes. La configuración se edita solo desde el Facturador. Scope `comprobantes:read`.",
+        "operationId": "V1Controller_configuracion",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionPublicaDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Ver emisor y puntos de venta",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
     "/api/v1/items": {
       "post": {
         "description": "Ingresa los ítems al staging (scope `items:write`). Es idempotente por `referenciaExterna`: reenviar un ítem igual no lo duplica y uno distinto lo actualiza (si todavía no se facturó). Cada ítem vuelve con su estado y sus errores.",
         "operationId": "V1Controller_cargarItems",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -100,6 +147,15 @@
         "operationId": "V1Controller_items",
         "parameters": [
           {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "referencia",
             "required": false,
             "in": "query",
@@ -137,6 +193,15 @@
         "operationId": "V1Controller_importacion",
         "parameters": [
           {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -173,6 +238,15 @@
         "description": "Deja sus ítems válidos listos para generar borradores.",
         "operationId": "V1Controller_confirmar",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "id",
             "required": true,
@@ -216,9 +290,18 @@
     },
     "/api/v1/clientes": {
       "get": {
-        "description": "Scope `items:write`.",
+        "description": "Activos, por documento o nombre (`?q=`), hasta 200. Scope `items:write`.",
         "operationId": "V1Controller_buscarClientes",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "q",
             "required": false,
@@ -248,7 +331,7 @@
             "api-key": []
           }
         ],
-        "summary": "Buscar clientes por documento o nombre",
+        "summary": "Listar o buscar clientes",
         "tags": [
           "API pública"
         ]
@@ -257,6 +340,15 @@
         "description": "Valida el documento (dígito verificador del CUIT). `409` si ya existe. Scope `items:write`.",
         "operationId": "V1Controller_crearCliente",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -300,11 +392,166 @@
         ]
       }
     },
-    "/api/v1/comprobantes/borradores": {
-      "post": {
-        "description": "Un borrador por cliente y moneda (o también por mes). Solo toma ítems VALIDO de importaciones confirmadas. La letra se sugiere según las condiciones de IVA. Scope `comprobantes:write`.",
-        "operationId": "V1Controller_generar",
+    "/api/v1/clientes/padron/{cuit}": {
+      "get": {
+        "description": "Razón social, domicilio y condición de IVA para dar de alta al cliente. No guarda nada. Scope `items:write`.",
+        "operationId": "V1Controller_padron",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cuit",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PadronDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Consultar un CUIT en el padrón de ARCA",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
+    "/api/v1/clientes/{id}": {
+      "get": {
+        "description": "Scope `items:write`.",
+        "operationId": "V1Controller_cliente",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Ver un cliente",
+        "tags": [
+          "API pública"
+        ]
+      },
+      "patch": {
+        "description": "Scope `items:write`.",
+        "operationId": "V1Controller_actualizarCliente",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarClienteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Modificar un cliente",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
+    "/api/v1/comprobantes": {
+      "post": {
+        "description": "Factura con sus líneas (precios sin IVA). Si se omite `tipo`, se usa la letra que corresponde al emisor y al cliente. `puntoVentaId` sale de `GET /configuracion`. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_crearBorrador",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "Idempotency-Key",
             "in": "header",
@@ -320,7 +567,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GenerarBorradoresApiDto"
+                "$ref": "#/components/schemas/CrearBorradorDto"
               }
             }
           }
@@ -331,7 +578,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BorradoresGeneradosDto"
+                  "$ref": "#/components/schemas/ComprobantePublicoDto"
                 }
               }
             }
@@ -342,17 +589,24 @@
             "api-key": []
           }
         ],
-        "summary": "Generar borradores desde ítems",
+        "summary": "Crear un borrador a mano",
         "tags": [
           "API pública"
         ]
-      }
-    },
-    "/api/v1/comprobantes": {
+      },
       "get": {
         "description": "Scope `comprobantes:read`.",
         "operationId": "V1Controller_listar",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "estado",
             "required": false,
@@ -420,11 +674,77 @@
         ]
       }
     },
+    "/api/v1/comprobantes/borradores": {
+      "post": {
+        "description": "Un borrador por cliente y moneda (o también por mes). Solo toma ítems VALIDO de importaciones confirmadas. La letra se sugiere según las condiciones de IVA. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_generar",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional (obligatoria para emitir). 8 a 100 caracteres. Reintentar con la misma clave devuelve la misma respuesta durante 24 h.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerarBorradoresApiDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BorradoresGeneradosDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Generar borradores desde ítems",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
     "/api/v1/comprobantes/{id}": {
       "get": {
         "description": "Scope `comprobantes:read`.",
         "operationId": "V1Controller_obtener",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "id",
             "required": true,
@@ -455,6 +775,208 @@
         "tags": [
           "API pública"
         ]
+      },
+      "patch": {
+        "description": "Solo borradores o rechazados. `version` es obligatoria (lock optimista: `409` si cambió). Mandar `lineas` las reemplaza todas. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_actualizarBorrador",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarBorradorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobantePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Modificar un borrador",
+        "tags": [
+          "API pública"
+        ]
+      },
+      "delete": {
+        "description": "Solo borradores que nunca llegaron a ARCA. Sus ítems vuelven a estar disponibles para facturar. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_eliminarBorrador",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Eliminar un borrador",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
+    "/api/v1/comprobantes/{id}/notas": {
+      "post": {
+        "description": "Sobre una factura emitida: crea el borrador de la nota con las mismas líneas (editables), asociado a la factura. Después se emite como cualquier comprobante. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_crearNota",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opcional (obligatoria para emitir). 8 a 100 caracteres. Reintentar con la misma clave devuelve la misma respuesta durante 24 h.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearNotaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobantePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Crear una nota de crédito o débito",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
+    "/api/v1/comprobantes/{id}/verificar": {
+      "post": {
+        "description": "Consulta en ARCA un comprobante PENDIENTE_VERIFICACION (también se hace solo, cada pocos minutos). En otro estado lo devuelve igual. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_verificar",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComprobantePublicoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Verificar un comprobante pendiente",
+        "tags": [
+          "API pública"
+        ]
       }
     },
     "/api/v1/comprobantes/{id}/emitir": {
@@ -462,6 +984,15 @@
         "description": "`Idempotency-Key` obligatoria: reintentar con la misma clave nunca emite dos veces. Responde EMITIDO, `422` si ARCA rechaza (con el motivo) o PENDIENTE_VERIFICACION si no se supo el resultado (se verifica solo; te llega el webhook). Scope `comprobantes:write`.",
         "operationId": "V1Controller_emitir",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "id",
             "required": true,
@@ -518,6 +1049,15 @@
         "description": "Solo comprobantes con CAE. Scope `comprobantes:read`.",
         "operationId": "V1Controller_descargarPdf",
         "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "id",
             "required": true,
@@ -652,6 +1192,365 @@
           "tipoDocumento",
           "numeroDocumento",
           "condicionIva"
+        ]
+      },
+      "ActualizarClienteDto": {
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "tipoDocumento": {
+            "enum": [
+              "CONSUMIDOR_FINAL",
+              "CUIT",
+              "CUIL",
+              "DNI",
+              "PASAPORTE"
+            ],
+            "type": "string"
+          },
+          "numeroDocumento": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "condicionIva": {
+            "enum": [
+              "RESPONSABLE_INSCRIPTO",
+              "EXENTO",
+              "CONSUMIDOR_FINAL",
+              "MONOTRIBUTO",
+              "NO_CATEGORIZADO",
+              "PROVEEDOR_EXTERIOR",
+              "CLIENTE_EXTERIOR",
+              "IVA_LIBERADO",
+              "MONOTRIBUTO_SOCIAL",
+              "NO_ALCANZADO",
+              "MONOTRIBUTO_TIP"
+            ],
+            "type": "string"
+          },
+          "domicilio": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 300
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "format": "email"
+          },
+          "pais": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "monedaPreferida": {
+            "enum": [
+              "ARS",
+              "USD"
+            ],
+            "type": "string"
+          },
+          "diasVencimiento": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 365
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LineaDto": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "cantidad": {
+            "type": "string",
+            "pattern": "^\\d{1,11}(\\.\\d{1,4})?$"
+          },
+          "unidad": {
+            "type": "string",
+            "enum": [
+              "HORA",
+              "UNIDAD",
+              "SERVICIO",
+              "MES"
+            ]
+          },
+          "precioUnitario": {
+            "type": "string",
+            "pattern": "^\\d{1,11}(\\.\\d{1,4})?$"
+          },
+          "bonificacionPct": {
+            "type": "string",
+            "pattern": "^\\d{1,2}(\\.\\d{1,2})?$"
+          },
+          "alicuotaIva": {
+            "type": "string",
+            "enum": [
+              "0",
+              "2.5",
+              "5",
+              "10.5",
+              "21",
+              "27"
+            ]
+          }
+        },
+        "required": [
+          "descripcion",
+          "cantidad",
+          "unidad",
+          "precioUnitario",
+          "alicuotaIva"
+        ]
+      },
+      "CrearBorradorDto": {
+        "type": "object",
+        "properties": {
+          "clienteId": {
+            "type": "string"
+          },
+          "puntoVentaId": {
+            "type": "string"
+          },
+          "tipo": {
+            "description": "Si se omite, se usa la letra sugerida. Solo facturas: las notas se crean desde la factura.",
+            "enum": [
+              "FACTURA_A",
+              "FACTURA_B",
+              "FACTURA_C"
+            ],
+            "type": "string"
+          },
+          "fechaEmision": {
+            "type": "string"
+          },
+          "concepto": {
+            "enum": [
+              "PRODUCTOS",
+              "SERVICIOS",
+              "PRODUCTOS_Y_SERVICIOS"
+            ],
+            "type": "string"
+          },
+          "fechaServicioDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "fechaServicioHasta": {
+            "type": "string",
+            "nullable": true
+          },
+          "fechaVtoPago": {
+            "type": "string",
+            "nullable": true
+          },
+          "moneda": {
+            "enum": [
+              "ARS",
+              "USD"
+            ],
+            "type": "string"
+          },
+          "cancelaMismaMoneda": {
+            "type": "boolean"
+          },
+          "observaciones": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "lineas": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDto"
+            }
+          }
+        },
+        "required": [
+          "clienteId",
+          "puntoVentaId",
+          "fechaEmision",
+          "concepto",
+          "lineas"
+        ]
+      },
+      "ActualizarBorradorDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number"
+          },
+          "clienteId": {
+            "type": "string"
+          },
+          "puntoVentaId": {
+            "type": "string"
+          },
+          "tipo": {
+            "enum": [
+              "FACTURA_A",
+              "NOTA_DEBITO_A",
+              "NOTA_CREDITO_A",
+              "FACTURA_B",
+              "NOTA_DEBITO_B",
+              "NOTA_CREDITO_B",
+              "FACTURA_C",
+              "NOTA_DEBITO_C",
+              "NOTA_CREDITO_C"
+            ],
+            "type": "string"
+          },
+          "fechaEmision": {
+            "type": "string"
+          },
+          "concepto": {
+            "enum": [
+              "PRODUCTOS",
+              "SERVICIOS",
+              "PRODUCTOS_Y_SERVICIOS"
+            ],
+            "type": "string"
+          },
+          "fechaServicioDesde": {
+            "type": "string",
+            "nullable": true
+          },
+          "fechaServicioHasta": {
+            "type": "string",
+            "nullable": true
+          },
+          "fechaVtoPago": {
+            "type": "string",
+            "nullable": true
+          },
+          "moneda": {
+            "enum": [
+              "ARS",
+              "USD"
+            ],
+            "type": "string"
+          },
+          "cancelaMismaMoneda": {
+            "type": "boolean"
+          },
+          "observaciones": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000
+          },
+          "motivo": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500
+          },
+          "lineas": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineaDto"
+            }
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "CrearNotaDto": {
+        "type": "object",
+        "properties": {
+          "clase": {
+            "enum": [
+              "NOTA_CREDITO",
+              "NOTA_DEBITO"
+            ],
+            "type": "string"
+          },
+          "motivo": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "clase",
+          "motivo"
+        ]
+      },
+      "EmisorPublicoDto": {
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "type": "string"
+          },
+          "nombreFantasia": {
+            "type": "string"
+          },
+          "cuit": {
+            "type": "string"
+          },
+          "condicionIva": {
+            "type": "string"
+          },
+          "ambiente": {
+            "type": "string",
+            "description": "HOMOLOGACION (sin validez fiscal) o PRODUCCION."
+          }
+        },
+        "required": [
+          "razonSocial",
+          "nombreFantasia",
+          "cuit",
+          "condicionIva",
+          "ambiente"
+        ]
+      },
+      "PuntoVentaPublicoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "number"
+          },
+          "descripcion": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "numero",
+          "descripcion"
+        ]
+      },
+      "ConfiguracionPublicaDto": {
+        "type": "object",
+        "properties": {
+          "emisor": {
+            "$ref": "#/components/schemas/EmisorPublicoDto"
+          },
+          "puntosVenta": {
+            "description": "Puntos de venta activos del ambiente actual (para `puntoVentaId` al crear un borrador).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PuntoVentaPublicoDto"
+            }
+          }
+        },
+        "required": [
+          "emisor",
+          "puntosVenta"
         ]
       },
       "AltaClienteDto": {
@@ -1018,6 +1917,14 @@
           },
           "condicionIva": {
             "type": "string"
+          },
+          "domicilio": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -1025,45 +1932,41 @@
           "razonSocial",
           "tipoDocumento",
           "numeroDocumento",
-          "condicionIva"
+          "condicionIva",
+          "domicilio",
+          "email"
         ]
       },
-      "GenerarBorradoresApiDto": {
+      "PadronDto": {
         "type": "object",
         "properties": {
-          "itemIds": {
-            "description": "Ids de ítems del Facturador.",
-            "maxItems": 2000,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "cuit": {
+            "type": "string"
           },
-          "referencias": {
-            "description": "O tus propias referencias (`referenciaExterna`) de los ítems.",
-            "maxItems": 2000,
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "razonSocial": {
+            "type": "string"
           },
-          "importacionId": {
+          "domicilio": {
             "type": "string",
-            "description": "O todos los ítems válidos de una importación confirmada."
+            "nullable": true
           },
-          "agrupacion": {
+          "condicionIva": {
             "type": "string",
-            "description": "`cliente`: un borrador por cliente y moneda. `cliente-periodo`: además, uno por mes.",
-            "enum": [
-              "cliente",
-              "cliente-periodo"
-            ]
+            "nullable": true,
+            "description": "Condición de IVA según ARCA, lista para dar de alta al cliente."
           },
-          "fechaEmision": {
+          "ambiente": {
             "type": "string",
-            "description": "YYYY-MM-DD; por defecto, hoy."
+            "description": "Ambiente de ARCA en el que se consultó."
           }
-        }
+        },
+        "required": [
+          "cuit",
+          "razonSocial",
+          "domicilio",
+          "condicionIva",
+          "ambiente"
+        ]
       },
       "PeriodoPublicoDto": {
         "type": "object",
@@ -1118,6 +2021,9 @@
           "precioUnitario": {
             "type": "string"
           },
+          "bonificacionPct": {
+            "type": "string"
+          },
           "alicuotaIva": {
             "type": "string"
           },
@@ -1133,6 +2039,7 @@
           "cantidad",
           "unidad",
           "precioUnitario",
+          "bonificacionPct",
           "alicuotaIva",
           "importeNeto",
           "importeTotal"
@@ -1156,6 +2063,30 @@
           "id",
           "tipo",
           "numero"
+        ]
+      },
+      "NotaAsociadaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "numero": {
+            "type": "number",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "numero",
+          "estado"
         ]
       },
       "ErrorComprobanteDto": {
@@ -1198,6 +2129,10 @@
           },
           "puntoVenta": {
             "type": "number"
+          },
+          "puntoVentaId": {
+            "type": "string",
+            "nullable": true
           },
           "numero": {
             "type": "number",
@@ -1258,6 +2193,22 @@
               }
             ]
           },
+          "notas": {
+            "description": "Notas de crédito o débito hechas sobre esta factura.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotaAsociadaDto"
+            }
+          },
+          "observaciones": {
+            "type": "string",
+            "nullable": true
+          },
+          "advertenciaLetra": {
+            "type": "string",
+            "nullable": true,
+            "description": "Aviso si la letra elegida no es la habitual para el emisor y el cliente."
+          },
           "error": {
             "nullable": true,
             "description": "Motivo del rechazo de ARCA o del estado pendiente.",
@@ -1280,6 +2231,7 @@
           "ambiente",
           "version",
           "puntoVenta",
+          "puntoVentaId",
           "numero",
           "fechaEmision",
           "concepto",
@@ -1293,9 +2245,49 @@
           "cliente",
           "lineas",
           "asociado",
+          "notas",
+          "observaciones",
+          "advertenciaLetra",
           "error",
           "emitidoEn"
         ]
+      },
+      "GenerarBorradoresApiDto": {
+        "type": "object",
+        "properties": {
+          "itemIds": {
+            "description": "Ids de ítems del Facturador.",
+            "maxItems": 2000,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "referencias": {
+            "description": "O tus propias referencias (`referenciaExterna`) de los ítems.",
+            "maxItems": 2000,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "importacionId": {
+            "type": "string",
+            "description": "O todos los ítems válidos de una importación confirmada."
+          },
+          "agrupacion": {
+            "type": "string",
+            "description": "`cliente`: un borrador por cliente y moneda. `cliente-periodo`: además, uno por mes.",
+            "enum": [
+              "cliente",
+              "cliente-periodo"
+            ]
+          },
+          "fechaEmision": {
+            "type": "string",
+            "description": "YYYY-MM-DD; por defecto, hoy."
+          }
+        }
       },
       "BorradoresGeneradosDto": {
         "type": "object",

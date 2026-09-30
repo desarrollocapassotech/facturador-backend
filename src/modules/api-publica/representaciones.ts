@@ -1,5 +1,6 @@
 import type {
   ClientePublicoDto,
+  ConfiguracionPublicaDto,
   ComprobantePublicoDto,
   ImportacionPublicaDto,
   ItemPublicoDto,
@@ -36,13 +37,42 @@ export interface ComprobanteInterno {
   errorDetalle: string | null;
   emitidoEn: Date | null;
   puntoVenta: { numero: number };
-  cliente: { id: string; razonSocial: string; tipoDocumento: string; numeroDocumento: string; condicionIva: string };
-  lineas: Array<{ descripcion: string; cantidad: Dec; unidad: string; precioUnitario: Dec; alicuotaIva: Dec; importeNeto: Dec; importeTotal: Dec }>;
+  puntoVentaId?: string;
+  observaciones?: string | null;
+  advertenciaLetra?: string | null;
+  cliente: {
+    id: string;
+    razonSocial: string;
+    tipoDocumento: string;
+    numeroDocumento: string;
+    condicionIva: string;
+    domicilio?: string | null;
+    email?: string | null;
+  };
+  lineas: Array<{
+    descripcion: string;
+    cantidad: Dec;
+    unidad: string;
+    precioUnitario: Dec;
+    bonificacionPct?: Dec;
+    alicuotaIva: Dec;
+    importeNeto: Dec;
+    importeTotal: Dec;
+  }>;
   asociado: { id: string; tipo: string; numero: number | null } | null;
+  asociadosDesde?: Array<{ id: string; tipo: string; numero: number | null; estado: string }>;
 }
 
 export function clientePublico(c: ComprobanteInterno['cliente']): ClientePublicoDto {
-  return { id: c.id, razonSocial: c.razonSocial, tipoDocumento: c.tipoDocumento, numeroDocumento: c.numeroDocumento, condicionIva: c.condicionIva };
+  return {
+    id: c.id,
+    razonSocial: c.razonSocial,
+    tipoDocumento: c.tipoDocumento,
+    numeroDocumento: c.numeroDocumento,
+    condicionIva: c.condicionIva,
+    domicilio: c.domicilio ?? null,
+    email: c.email ?? null,
+  };
 }
 
 export function comprobantePublico(c: ComprobanteInterno): ComprobantePublicoDto {
@@ -55,6 +85,7 @@ export function comprobantePublico(c: ComprobanteInterno): ComprobantePublicoDto
     ambiente: c.ambiente,
     version: c.version,
     puntoVenta: c.puntoVenta.numero,
+    puntoVentaId: c.puntoVentaId ?? null,
     numero: c.numero,
     fechaEmision: fecha(c.fechaEmision) as string,
     concepto: c.concepto,
@@ -76,11 +107,15 @@ export function comprobantePublico(c: ComprobanteInterno): ComprobantePublicoDto
       cantidad: l.cantidad.toString(),
       unidad: l.unidad,
       precioUnitario: l.precioUnitario.toString(),
+      bonificacionPct: l.bonificacionPct?.toString() ?? '0',
       alicuotaIva: l.alicuotaIva.toString(),
       importeNeto: l.importeNeto.toString(),
       importeTotal: l.importeTotal.toString(),
     })),
     asociado: c.asociado ? { id: c.asociado.id, tipo: c.asociado.tipo, numero: c.asociado.numero } : null,
+    notas: (c.asociadosDesde ?? []).map((n) => ({ id: n.id, tipo: n.tipo, numero: n.numero, estado: n.estado })),
+    observaciones: c.observaciones ?? null,
+    advertenciaLetra: c.advertenciaLetra ?? null,
     error:
       c.errorMensaje && (c.estado === 'RECHAZADO' || c.estado === 'PENDIENTE_VERIFICACION')
         ? { mensaje: c.errorMensaje, detalle: c.errorDetalle }
@@ -150,5 +185,26 @@ export function importacionPublica(i: ImportacionInterna): ImportacionPublicaDto
     actualizados: i.actualizados,
     advertencias: Array.isArray(i.advertencias) ? (i.advertencias as ImportacionPublicaDto['advertencias']) : [],
     createdAt: i.createdAt.toISOString(),
+  };
+}
+
+export interface ConfiguracionInterna {
+  emisor: { razonSocial: string; nombreFantasia: string; cuit: string; condicionIva: string; ambienteArca: string };
+  puntosVenta: Array<{ id: string; numero: number; ambiente: string; descripcion: string | null; activo: boolean }>;
+}
+
+/** Datos de solo lectura para armar comprobantes desde otro sistema (la configuración se edita en el Facturador). */
+export function configuracionPublica(c: ConfiguracionInterna): ConfiguracionPublicaDto {
+  return {
+    emisor: {
+      razonSocial: c.emisor.razonSocial,
+      nombreFantasia: c.emisor.nombreFantasia,
+      cuit: c.emisor.cuit,
+      condicionIva: c.emisor.condicionIva,
+      ambiente: c.emisor.ambienteArca,
+    },
+    puntosVenta: c.puntosVenta
+      .filter((p) => p.activo && p.ambiente === c.emisor.ambienteArca)
+      .map((p) => ({ id: p.id, numero: p.numero, descripcion: p.descripcion })),
   };
 }

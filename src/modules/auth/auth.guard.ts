@@ -10,7 +10,8 @@ import { IntegracionesService } from './integraciones.service';
 /**
  * Guard global: toda ruta requiere sesión salvo las marcadas con @Public().
  * Las rutas @ApiKey(...) son solo para integraciones: exigen `X-Api-Key` con los scopes
- * pedidos y rechazan la sesión de usuario. En el resto, `X-Api-Key` no sirve.
+ * pedidos y rechazan la sesión de usuario (opcional `X-Usuario-Email`: quién actúa, para
+ * la auditoría). En el resto, `X-Api-Key` no sirve.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -34,7 +35,8 @@ export class AuthGuard implements CanActivate {
       const auth = await this.integraciones.validarApiKey(clave);
       const faltan = scopes.filter((s) => !auth.scopes.includes(s));
       if (faltan.length) throw new ForbiddenException(`La API key no tiene permiso para: ${faltan.join(', ')}.`);
-      request.auth = auth;
+      const email = request.headers['x-usuario-email'];
+      request.auth = typeof email === 'string' && email.trim() ? await this.integraciones.actuarComo(auth, email) : auth;
       return true;
     }
 

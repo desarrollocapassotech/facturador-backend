@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import type { OrigenItem } from '@prisma/client';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import type { AuthContext } from './auth-context';
 import { generarApiKey, hashesIguales, prefijoDeApiKey, sha256Hex, type Scope } from './claves';
+import { normalizarEmail } from './password';
 
 const SELECT_PUBLICO = {
   id: true,
@@ -17,6 +18,7 @@ const SELECT_PUBLICO = {
 
 const CLAVE_INVALIDA = 'API key inválida o revocada.';
 const UN_MINUTO = 60_000;
+const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 
 @Injectable()
 export class IntegracionesService {
@@ -54,6 +56,23 @@ export class IntegracionesService {
       if (!existe) throw new NotFoundException('Integración no encontrada.');
     }
     return this.prisma.integracion.findUniqueOrThrow({ where: { tenantId_id: { tenantId, id } }, select: SELECT_PUBLICO });
+  }
+
+  /**
+   * `X-Usuario-Email`: la integración indica qué persona de su sistema hace la acción, para la
+   * auditoría (creadoPor/emitidoPor). Si el usuario no existe en el tenant, se crea sin contraseña.
+   */
+  async actuarComo(auth: AuthContext, emailCrudo: string): Promise<AuthContext> {
+    const email = normalizarEmail(emailCrudo);
+    if (!EMAIL.test(email)) throw new BadRequestException('X-Usuario-Email no es un email válido.');
+    const usuario = await this.prisma.usuario.upsert({
+      where: { tenantId_email: { tenantId: auth.tenantId, email } },
+      create: { tenantId: auth.tenantId, email, creadoPor: `integracion:${auth.integracionId}` },
+      update: {},
+      select: { id: true, activo: true },
+    });
+    if (!usuario.activo) throw new ForbiddenException('El usuario está desactivado en el Facturador.');
+    return { ...auth, usuarioId: usuario.id };
   }
 
   /** Valida `X-Api-Key` y arma el AuthContext de la integración. */
