@@ -2,27 +2,22 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   Param,
   Patch,
   Post,
-  Put,
   Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentAuth, type AuthContext } from '../auth';
-import { ConexionTrackerService } from './adapters/tracker/conexion-tracker.service';
 import { PlantillasMapeoService } from './adapters/excel/plantillas-mapeo.service';
 import {
   ActualizarPlantillaMapeoDto,
-  ConexionTrackerDto,
   EditarItemDto,
   ImportarManualDto,
-  ImportarTrackerDto,
   ListarItemsQuery,
   PlantillaMapeoDto,
 } from './dto/importaciones.dto';
@@ -53,17 +48,6 @@ export class ImportacionesController {
   @Get(':id')
   obtener(@CurrentAuth() auth: AuthContext, @Param('id') id: string) {
     return this.importaciones.obtener(auth.tenantId, id);
-  }
-
-  @Post('tracker')
-  tracker(@CurrentAuth() auth: AuthContext, @Body() dto: ImportarTrackerDto) {
-    return this.importaciones.importarTracker(auth, {
-      desde: dto.desde,
-      hasta: dto.hasta,
-      baseHoras: dto.baseHoras ?? 'FACTURABLES',
-      agrupacion: dto.agrupacion ?? 'proyecto-mes',
-      clienteExternoIds: dto.clienteExternoIds,
-    });
   }
 
   @Post('excel')
@@ -114,10 +98,7 @@ export class ImportacionesController {
 
 @Controller('configuracion')
 export class ConfiguracionImportacionesController {
-  constructor(
-    private readonly plantillas: PlantillasMapeoService,
-    private readonly tracker: ConexionTrackerService,
-  ) {}
+  constructor(private readonly plantillas: PlantillasMapeoService) {}
 
   @Get('plantillas-mapeo')
   plantillasMapeo(@CurrentAuth() auth: AuthContext) {
@@ -150,26 +131,5 @@ export class ConfiguracionImportacionesController {
       delimitador: delimitador === ',' || delimitador === ';' || delimitador === '\t' ? delimitador : undefined,
       encoding: encoding === 'latin1' ? 'latin1' : undefined,
     });
-  }
-
-  @Get('tracker')
-  conexionTracker(@CurrentAuth() auth: AuthContext) {
-    return this.tracker.obtenerPublica(auth.tenantId);
-  }
-
-  @Put('tracker')
-  guardarConexionTracker(@CurrentAuth() auth: AuthContext, @Body() dto: ConexionTrackerDto) {
-    return this.tracker.guardar(auth.tenantId, dto.baseUrl, dto.apiKey?.trim() || undefined);
-  }
-
-  @Delete('tracker')
-  eliminarConexionTracker(@CurrentAuth() auth: AuthContext) {
-    return this.tracker.eliminar(auth.tenantId);
-  }
-
-  @Post('tracker/probar')
-  @HttpCode(200)
-  probarTracker(@CurrentAuth() auth: AuthContext) {
-    return this.tracker.probar(auth.tenantId);
   }
 }

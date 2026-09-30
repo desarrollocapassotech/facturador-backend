@@ -1,6 +1,6 @@
 /**
  * Integración del flujo importación → staging → borrador → emisión contra una base real
- * (DATABASE_URL ya migrada). Sin DATABASE_URL se saltea. ARCA y el tracker son falsos.
+ * (DATABASE_URL ya migrada). Sin DATABASE_URL se saltea. ARCA es falso.
  */
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConflictException } from '@nestjs/common';
@@ -15,10 +15,7 @@ import { EmisionService } from '../comprobantes/emision.service';
 import { TarifasService, TenantsService, type CredencialesArcaProvider } from '../tenants';
 import { ExcelCsvAdapter } from './adapters/excel/excel.adapter';
 import { PlantillasMapeoService } from './adapters/excel/plantillas-mapeo.service';
-import type { ConexionTrackerService } from './adapters/tracker/conexion-tracker.service';
-import { TrackerAdapter } from './adapters/tracker/tracker.adapter';
-import type { TrackerClient } from './adapters/tracker/tracker-client';
-import type { RegistroHorasTracker } from './adapters/tracker/tracker.types';
+import type { ItemFacturableInput } from './domain/item-facturable';
 import { ImportacionesService } from './importaciones.service';
 import { ItemsFacturablesService } from './items-facturables.service';
 import { StagingService } from './staging.service';
@@ -50,7 +47,6 @@ const hayBase = Boolean(process.env.DATABASE_URL);
   let auth: AuthContext;
   let tenantId: string;
   let acmeId: string;
-  let registros: RegistroHorasTracker[];
   let importaciones: ImportacionesService;
   let comprobantes: ComprobantesService;
   let emision: EmisionService;
@@ -60,15 +56,20 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     obtener: async (): Promise<CredencialesArca> => ({ tenantId, ambiente: 'HOMOLOGACION', cuit: '20409378472', certPem: null, keyPem: null, usaCuitPrueba: true }),
   } as unknown as CredencialesArcaProvider;
 
-  const entrada = (o: Partial<RegistroHorasTracker>): RegistroHorasTracker => ({
-    id: randomUUID(),
-    date: '2026-09-10',
-    hours: '5',
-    billableHours: '4',
-    project: { id: 'p-web', name: 'Web', billingType: 'hourly' },
-    client: { id: 'trk-acme', name: 'Acme', razonSocial: 'Acme SA', cuit: '30668346908', ivaCondition: 'Responsable Inscripto' },
-    ...o,
-  });
+  /** Ítem por hora de un proyecto y mes, como lo manda una integración por la API. */
+  const horas = (o: { cantidad: string; proyecto?: string; cliente?: Partial<ItemFacturableInput['cliente']> }): ItemFacturableInput => {
+    const proyecto = o.proyecto ?? 'web';
+    return {
+      origen: 'API',
+      referenciaExterna: `sistema:acme:${proyecto}:2026-09`,
+      cliente: o.cliente ? { ...o.cliente } : { referenciaExterna: 'ext-acme', tipoDocumento: 'CUIT', numeroDocumento: '30668346908' },
+      descripcion: `Horas ${proyecto}`,
+      cantidad: o.cantidad,
+      unidad: 'HORA',
+      periodo: { desde: '2026-09-01', hasta: '2026-09-30' },
+      metadatos: { tarifa: { claveExterna: `p-${proyecto}`, variables: { proyecto: proyecto === 'web' ? 'Web' : proyecto, periodo: 'Septiembre 2026' } } },
+    };
+  };
 
   beforeAll(async () => {
     const t = await prisma.tenant.create({
@@ -97,11 +98,8 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     const clientes = new ClientesService(prisma, cred, arca);
     const items = new ItemsFacturablesService(prisma);
     const staging = new StagingService(prisma, clientes, tarifas);
-    registros = [];
-    const client = { obtenerHoras: async () => registros } as unknown as TrackerClient;
-    const conexiones = { datos: async () => ({ baseUrl: 'http://tracker.test', apiKey: 'k' }) } as unknown as ConexionTrackerService;
     const plantillas = new PlantillasMapeoService(prisma);
-    importaciones = new ImportacionesService(prisma, staging, new TrackerAdapter(conexiones, client), new ExcelCsvAdapter(), plantillas, new EventEmitter2());
+    importaciones = new ImportacionesService(prisma, staging, new ExcelCsvAdapter(), plantillas, new EventEmitter2());
     comprobantes = new ComprobantesService(prisma, clientes, tenants, items);
     emision = new EmisionService(prisma, comprobantes, tenants, cred, arca, items, new EventEmitter2());
   });
@@ -118,18 +116,17 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     await prisma.$disconnect();
   });
 
-  const params = { desde: '2026-09-01', hasta: '2026-09-30', baseHoras: 'FACTURABLES' as const, agrupacion: 'proyecto-mes' as const };
+  const api = (items: ItemFacturableInput[]) => importaciones.importarApi({ ...auth, origenIntegracion: 'API' }, items, {});
   const itemsDe = async (importacionId: string) => (await importaciones.items(tenantId, { importacionId })).items;
 
-  it('tracker sin tarifa: el ítem queda con error; con la tarifa, se recalcula el precio', async () => {
-    registros = [entrada({ billableHours: '4' }), entrada({ date: '2026-09-11', billableHours: '2.5' })];
-    const imp = await importaciones.importarTracker(auth, params);
+  it('sin precio ni tarifa: el ítem queda con error; con la tarifa, se recalcula el precio', async () => {
+    const imp = await api([horas({ cantidad: '6.5' })]);
     const [item] = await itemsDe(imp.id);
     expect(item.clienteId).toBe(acmeId); // por CUIT
     expect(item.estado).toBe('CON_ERRORES');
     expect(JSON.stringify(item.errores)).toMatch(/No hay tarifa por hora vigente/);
     // Se vinculó el cliente externo para las próximas veces.
-    expect(await prisma.clienteReferenciaExterna.count({ where: { tenantId, referenciaExterna: 'trk-acme' } })).toBe(1);
+    expect(await prisma.clienteReferenciaExterna.count({ where: { tenantId, referenciaExterna: 'ext-acme' } })).toBe(1);
 
     await tarifas.crear(tenantId, {
       clienteId: acmeId,
@@ -147,31 +144,21 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     expect(revalidado.cantidad.toString()).toBe('6.5');
   });
 
-  it('reimportar el mismo mes no duplica; si cambian las horas, actualiza', async () => {
-    const otra = await importaciones.importarTracker(auth, params);
+  it('reenviar el mismo ítem no duplica; si cambia la cantidad, actualiza', async () => {
+    const otra = await api([horas({ cantidad: '6.5' })]);
     expect(otra).toMatchObject({ duplicados: 1, actualizados: 0 });
-    registros = [...registros, entrada({ date: '2026-09-12', billableHours: '1' })];
-    const tercera = await importaciones.importarTracker(auth, params);
+    const tercera = await api([horas({ cantidad: '7.5' })]);
     expect(tercera).toMatchObject({ actualizados: 1, validos: 1 });
     const [item] = await itemsDe(tercera.id);
     expect(item.cantidad.toString()).toBe('7.5');
-    expect(await prisma.itemFacturable.count({ where: { tenantId, origen: 'TRACKER' } })).toBe(1);
-  });
-
-  it('cambiar la base de horas recalcula la cantidad sin volver al tracker', async () => {
-    const [item] = await prisma.itemFacturable.findMany({ where: { tenantId, origen: 'TRACKER' } });
-    const trabajadas = await importaciones.editarItem(tenantId, item.id, { baseHoras: 'TRABAJADAS' });
-    expect(trabajadas.cantidad.toString()).toBe('15');
-    const facturables = await importaciones.editarItem(tenantId, item.id, { baseHoras: 'FACTURABLES' });
-    expect(facturables.cantidad.toString()).toBe('7.5');
+    expect(await prisma.itemFacturable.count({ where: { tenantId, origen: 'API' } })).toBe(1);
   });
 
   it('asignar un cliente resuelve también los otros ítems del mismo cliente externo', async () => {
-    registros = [
-      entrada({ project: { id: 'p-a', name: 'A', billingType: 'hourly' }, client: { id: 'trk-nuevo', name: 'Nuevo' } }),
-      entrada({ project: { id: 'p-b', name: 'B', billingType: 'hourly' }, client: { id: 'trk-nuevo', name: 'Nuevo' } }),
-    ];
-    const imp = await importaciones.importarTracker(auth, params);
+    const imp = await api([
+      horas({ cantidad: '1', proyecto: 'a', cliente: { referenciaExterna: 'ext-nuevo' } }),
+      horas({ cantidad: '1', proyecto: 'b', cliente: { referenciaExterna: 'ext-nuevo' } }),
+    ]);
     const items = await itemsDe(imp.id);
     expect(items.every((i) => i.estado === 'CON_ERRORES' && !i.clienteId)).toBe(true);
     const r = await importaciones.editarItem(tenantId, items[0].id, { clienteId: acmeId });
@@ -181,7 +168,7 @@ const hayBase = Boolean(process.env.DATABASE_URL);
   });
 
   it('solo se generan borradores de importaciones confirmadas; eliminar el borrador libera los ítems', async () => {
-    const imp = (await prisma.importacion.findMany({ where: { tenantId, origen: 'TRACKER' }, orderBy: { createdAt: 'asc' } }))[2];
+    const imp = (await prisma.importacion.findMany({ where: { tenantId, origen: 'API' }, orderBy: { createdAt: 'asc' } }))[2];
     await expect(comprobantes.generarDesdeItems(auth, { importacionId: imp.id })).rejects.toThrow(/confirmaste la importación/);
     await importaciones.confirmar(tenantId, imp.id);
 
@@ -192,7 +179,7 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     expect(borrador.fechaServicioDesde?.toISOString().slice(0, 10)).toBe('2026-09-01');
     expect(borrador.importeTotal.toString()).toBe('453.75'); // 7.5 × 50 × 1.21
     expect(borrador.lineas[0].itemFacturableId).toBeTruthy();
-    const [item] = await prisma.itemFacturable.findMany({ where: { tenantId, origen: 'TRACKER', importacionId: imp.id } });
+    const [item] = await prisma.itemFacturable.findMany({ where: { tenantId, origen: 'API', importacionId: imp.id } });
     expect(item).toMatchObject({ estado: 'EN_BORRADOR', comprobanteId: borrador.id });
 
     // El mismo ítem no puede ir a dos borradores.
@@ -207,15 +194,14 @@ const hayBase = Boolean(process.env.DATABASE_URL);
   });
 
   it('emitir el borrador marca los ítems como facturados; reimportar distinto avisa', async () => {
-    const [item] = await prisma.itemFacturable.findMany({ where: { tenantId, origen: 'TRACKER', estado: 'VALIDO' } });
+    const [item] = await prisma.itemFacturable.findMany({ where: { tenantId, origen: 'API', estado: 'VALIDO' } });
     const r = await comprobantes.generarDesdeItems(auth, { itemIds: [item.id] });
     const b = await comprobantes.obtener(tenantId, r.comprobantes[0].id);
     const emitido = await emision.emitir(auth, b.id, b.version, randomUUID());
     expect(emitido.estado).toBe('EMITIDO');
     expect((await prisma.itemFacturable.findUniqueOrThrow({ where: { id: item.id } })).estado).toBe('FACTURADO');
 
-    registros = [...registros.filter((e) => e.client?.id === 'trk-acme'), entrada({ date: '2026-09-20', billableHours: '3' })];
-    const imp = await importaciones.importarTracker(auth, params);
+    const imp = await api([horas({ cantidad: '10.5' })]);
     expect(JSON.stringify(imp.advertencias)).toMatch(/Ya fue facturado/);
     expect((await prisma.itemFacturable.findUniqueOrThrow({ where: { id: item.id } })).estado).toBe('FACTURADO');
   });

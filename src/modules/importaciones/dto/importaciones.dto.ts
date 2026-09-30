@@ -3,7 +3,6 @@ import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
-  IsArray,
   IsBoolean,
   IsEnum,
   IsIn,
@@ -23,28 +22,6 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const DECIMAL = /^\d{1,11}(\.\d{1,4})?$/;
 const aTexto = ({ value }: { value: unknown }) => (typeof value === 'number' ? String(value) : value);
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
-
-export class ImportarTrackerDto {
-  @Matches(FECHA, { message: 'desde debe tener formato YYYY-MM-DD.' })
-  desde: string;
-
-  @Matches(FECHA, { message: 'hasta debe tener formato YYYY-MM-DD.' })
-  hasta: string;
-
-  @IsOptional()
-  @IsIn(['FACTURABLES', 'TRABAJADAS'])
-  baseHoras?: 'FACTURABLES' | 'TRABAJADAS';
-
-  @IsOptional()
-  @IsIn(['proyecto-mes', 'registro'])
-  agrupacion?: 'proyecto-mes' | 'registro';
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @ArrayMaxSize(200)
-  clienteExternoIds?: string[];
-}
 
 export class ItemManualDto {
   /** uuid generado en el frontend: reintentar el envío no duplica. */
@@ -157,11 +134,6 @@ export class EditarItemDto {
   @IsOptional()
   @Matches(FECHA)
   periodoHasta?: string;
-
-  /** Solo ítems por hora del tracker: recalcula la cantidad desde los metadatos. */
-  @IsOptional()
-  @IsIn(['FACTURABLES', 'TRABAJADAS'])
-  baseHoras?: 'FACTURABLES' | 'TRABAJADAS';
 }
 
 export class ListarItemsQuery {
@@ -225,17 +197,4 @@ export class ActualizarPlantillaMapeoDto {
   @IsOptional()
   @IsBoolean()
   activa?: boolean;
-}
-
-export class ConexionTrackerDto {
-  @IsString()
-  @IsNotEmpty({ message: 'Falta la URL del tracker.' })
-  @MaxLength(300)
-  baseUrl: string;
-
-  /** Si se omite, se conserva la clave guardada. */
-  @IsOptional()
-  @IsString()
-  @MaxLength(300)
-  apiKey?: string;
 }

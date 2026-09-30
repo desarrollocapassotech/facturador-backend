@@ -1,14 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, type EstadoItem, type ItemFacturable, type OrigenItem } from '@prisma/client';
-import Decimal from 'decimal.js';
 import { EVENTOS, type EventoImportacion } from '../../shared/eventos/eventos';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import type { AuthContext } from '../auth';
 import { ExcelCsvAdapter } from './adapters/excel/excel.adapter';
 import { PlantillasMapeoService } from './adapters/excel/plantillas-mapeo.service';
-import { TrackerAdapter } from './adapters/tracker/tracker.adapter';
-import type { ParametrosTracker } from './adapters/tracker/tracker.types';
 import type { ItemFacturableInput } from './domain/item-facturable';
 import { EditarItemDto, ItemManualDto, ListarItemsQuery } from './dto/importaciones.dto';
 import { inputDeItem, StagingService, type MetadatosStaging } from './staging.service';
@@ -27,7 +24,6 @@ export class ImportacionesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly staging: StagingService,
-    private readonly tracker: TrackerAdapter,
     private readonly excel: ExcelCsvAdapter,
     private readonly plantillas: PlantillasMapeoService,
     private readonly eventos: EventEmitter2,
@@ -79,11 +75,6 @@ export class ImportacionesService {
   }
 
   // ── Ingreso ──────────────────────────────────────────────────────────────
-
-  async importarTracker(auth: AuthContext, p: ParametrosTracker) {
-    const resultado = await this.tracker.extraer(ctx(auth), p);
-    return this.obtener(auth.tenantId, (await this.staging.ingresar(ctx(auth), 'TRACKER', resultado)).id);
-  }
 
   async importarExcel(auth: AuthContext, archivo: { buffer: Buffer; nombre: string }, plantillaMapeoId: string) {
     const plantilla = await this.plantillas.obtener(auth.tenantId, plantillaMapeoId);
@@ -208,12 +199,6 @@ export class ImportacionesService {
     } else if (!m.precioDeTarifa) {
       if (dto.moneda !== undefined) input.moneda = dto.moneda;
       if (dto.alicuotaIva !== undefined) input.alicuotaIva = dto.alicuotaIva;
-    }
-    if (dto.baseHoras !== undefined) {
-      if (item.origen !== 'TRACKER' || item.unidad !== 'HORA') throw new BadRequestException('La base de horas solo aplica a ítems por hora del tracker.');
-      const horas = dto.baseHoras === 'TRABAJADAS' ? m.horasTrabajadas : m.horasFacturables;
-      input.cantidad = new Decimal(String(horas ?? '0')).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toString();
-      m.baseHoras = dto.baseHoras;
     }
     input.metadatos = m;
 

@@ -134,7 +134,6 @@ model Tenant {
   puntosVenta          PuntoVenta[]
   certificados         CertificadoArca[]
   plantillaPdf         PlantillaPdf?
-  conexionTracker      ConexionTracker?
   clientes             Cliente[]
   referenciasClientes  ClienteReferenciaExterna[]
   tarifas              Tarifa[]
@@ -202,21 +201,6 @@ model PlantillaPdf {
   updatedAt        DateTime @updatedAt
 
   @@map("plantillas_pdf")
-}
-
-/// URL y API key del time tracker del tenant. La key va cifrada (no hasheada) porque el
-/// Facturador tiene que enviarla en cada consulta (ARCHITECTURE.md §7.3).
-model ConexionTracker {
-  tenantId       String    @id
-  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  baseUrl        String // ej. https://tracker.example.com (sin barra final)
-  apiKeyCifrada  String // v1:iv:tag:cipher
-  apiKeyPista    String // últimos 4 caracteres, para mostrar
-  ultimaPruebaEn DateTime?
-  ultimoError    String?
-  updatedAt      DateTime  @updatedAt
-
-  @@map("conexiones_tracker")
 }
 
 // ─────────────────────────────── Auth ───────────────────────────────
@@ -437,19 +421,19 @@ model PlantillaMapeo {
   @@map("plantillas_mapeo")
 }
 
-/// Un lote de ingreso (archivo, corrida del tracker, request de API, carga manual).
+/// Un lote de ingreso (archivo, request de API, carga manual).
 model Importacion {
   id               String            @id @default(cuid())
   tenantId         String
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   origen           OrigenItem
   estado           EstadoImportacion @default(EN_STAGING)
-  descripcion      String? // "Tracker 2026-09", nombre de archivo, etc.
+  descripcion      String? // nombre de archivo, lote de la API, etc.
   archivoSha256    String? // detectar el mismo archivo subido dos veces
   plantillaMapeoId String?
   plantillaMapeo   PlantillaMapeo?   @relation(fields: [tenantId, plantillaMapeoId], references: [tenantId, id], onDelete: Restrict)
   integracionId    String?
-  parametros       Json? // ej. { desde, hasta, baseHoras } para el tracker
+  parametros       Json? // parámetros del ingreso, si los hubo
   advertencias     Json? // [{ referencia?, mensaje }] del adaptador
   totalItems       Int               @default(0)
   validos          Int               @default(0)
