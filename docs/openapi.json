@@ -337,7 +337,7 @@
         ]
       },
       "post": {
-        "description": "Valida el documento (dígito verificador del CUIT). `409` si ya existe. Scope `items:write`.",
+        "description": "Valida el documento (dígito verificador del CUIT). `409` si ya existe. Con `referenciaExterna` queda asociado a tu id. Scope `items:write`.",
         "operationId": "V1Controller_crearCliente",
         "parameters": [
           {
@@ -364,7 +364,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CrearClienteDto"
+                "$ref": "#/components/schemas/CrearClienteApiDto"
               }
             }
           }
@@ -433,6 +433,109 @@
           }
         ],
         "summary": "Consultar un CUIT en el padrón de ARCA",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
+    "/api/v1/clientes/referencias": {
+      "get": {
+        "description": "Hasta 200 (`?referencia=a&referencia=b`). Solo vuelven los que ya están asociados. Scope `items:write`.",
+        "operationId": "V1Controller_clientesPorReferencia",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referencia",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClienteVinculadoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Clientes asociados a tus ids",
+        "tags": [
+          "API pública"
+        ]
+      }
+    },
+    "/api/v1/clientes/{id}/referencias": {
+      "post": {
+        "description": "Para usar un cliente que ya existe en el Facturador. Scope `items:write`.",
+        "operationId": "V1Controller_vincularCliente",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VincularReferenciaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClienteVinculadoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Asociar un cliente a tu id",
         "tags": [
           "API pública"
         ]
@@ -1122,76 +1225,6 @@
         },
         "required": [
           "email"
-        ]
-      },
-      "CrearClienteDto": {
-        "type": "object",
-        "properties": {
-          "razonSocial": {
-            "type": "string",
-            "maxLength": 200
-          },
-          "tipoDocumento": {
-            "enum": [
-              "CONSUMIDOR_FINAL",
-              "CUIT",
-              "CUIL",
-              "DNI",
-              "PASAPORTE"
-            ],
-            "type": "string"
-          },
-          "numeroDocumento": {
-            "type": "string",
-            "maxLength": 20
-          },
-          "condicionIva": {
-            "enum": [
-              "RESPONSABLE_INSCRIPTO",
-              "EXENTO",
-              "CONSUMIDOR_FINAL",
-              "MONOTRIBUTO",
-              "NO_CATEGORIZADO",
-              "PROVEEDOR_EXTERIOR",
-              "CLIENTE_EXTERIOR",
-              "IVA_LIBERADO",
-              "MONOTRIBUTO_SOCIAL",
-              "NO_ALCANZADO",
-              "MONOTRIBUTO_TIP"
-            ],
-            "type": "string"
-          },
-          "domicilio": {
-            "type": "string",
-            "maxLength": 300
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
-          },
-          "pais": {
-            "type": "string",
-            "pattern": "^[A-Z]{2}$"
-          },
-          "monedaPreferida": {
-            "enum": [
-              "ARS",
-              "USD"
-            ],
-            "type": "string"
-          },
-          "diasVencimiento": {
-            "type": "number",
-            "nullable": true,
-            "minimum": 0,
-            "maximum": 365
-          }
-        },
-        "required": [
-          "razonSocial",
-          "tipoDocumento",
-          "numeroDocumento",
-          "condicionIva"
         ]
       },
       "ActualizarClienteDto": {
@@ -1966,6 +1999,110 @@
           "domicilio",
           "condicionIva",
           "ambiente"
+        ]
+      },
+      "ClienteVinculadoDto": {
+        "type": "object",
+        "properties": {
+          "referenciaExterna": {
+            "type": "string",
+            "description": "Id del cliente en tu sistema."
+          },
+          "cliente": {
+            "$ref": "#/components/schemas/ClientePublicoDto"
+          }
+        },
+        "required": [
+          "referenciaExterna",
+          "cliente"
+        ]
+      },
+      "VincularReferenciaDto": {
+        "type": "object",
+        "properties": {
+          "referenciaExterna": {
+            "type": "string",
+            "description": "Id del cliente en tu sistema. Si ya estaba asociado a otro cliente, pasa a este.",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "referenciaExterna"
+        ]
+      },
+      "CrearClienteApiDto": {
+        "type": "object",
+        "properties": {
+          "razonSocial": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "tipoDocumento": {
+            "enum": [
+              "CONSUMIDOR_FINAL",
+              "CUIT",
+              "CUIL",
+              "DNI",
+              "PASAPORTE"
+            ],
+            "type": "string"
+          },
+          "numeroDocumento": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "condicionIva": {
+            "enum": [
+              "RESPONSABLE_INSCRIPTO",
+              "EXENTO",
+              "CONSUMIDOR_FINAL",
+              "MONOTRIBUTO",
+              "NO_CATEGORIZADO",
+              "PROVEEDOR_EXTERIOR",
+              "CLIENTE_EXTERIOR",
+              "IVA_LIBERADO",
+              "MONOTRIBUTO_SOCIAL",
+              "NO_ALCANZADO",
+              "MONOTRIBUTO_TIP"
+            ],
+            "type": "string"
+          },
+          "domicilio": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "pais": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "monedaPreferida": {
+            "enum": [
+              "ARS",
+              "USD"
+            ],
+            "type": "string"
+          },
+          "diasVencimiento": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 365
+          },
+          "referenciaExterna": {
+            "type": "string",
+            "description": "Id del cliente en tu sistema: queda asociado y los ítems que lo usen lo encuentran.",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "razonSocial",
+          "tipoDocumento",
+          "numeroDocumento",
+          "condicionIva"
         ]
       },
       "PeriodoPublicoDto": {

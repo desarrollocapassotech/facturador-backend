@@ -1,4 +1,5 @@
 import { Type } from 'class-transformer';
+import { CrearClienteDto } from '../../clientes';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -22,6 +23,21 @@ import {
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
 // ── Entrada ────────────────────────────────────────────────────────────────
+
+export class CrearClienteApiDto extends CrearClienteDto {
+  /** Id del cliente en tu sistema: queda asociado y los ítems que lo usen lo encuentran. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  referenciaExterna?: string;
+}
+
+export class VincularReferenciaDto {
+  /** Id del cliente en tu sistema. Si ya estaba asociado a otro cliente, pasa a este. */
+  @IsString()
+  @MaxLength(200)
+  referenciaExterna: string;
+}
 
 export class AltaClienteDto {
   /** Razón social para dar de alta al cliente si no existe (se ofrece en el staging). */
@@ -289,6 +305,12 @@ export class ClientePublicoDto {
   condicionIva: string;
   domicilio: string | null;
   email: string | null;
+}
+
+export class ClienteVinculadoDto {
+  /** Id del cliente en tu sistema. */
+  referenciaExterna: string;
+  cliente: ClientePublicoDto;
 }
 
 export class PadronDto {

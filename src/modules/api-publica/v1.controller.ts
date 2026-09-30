@@ -18,7 +18,7 @@ import { ApiBody, ApiHeader, ApiOkResponse, ApiOperation, ApiProduces, ApiSecuri
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { ApiKey, CurrentAuth, type AuthContext } from '../auth';
-import { ActualizarClienteDto, ClientesService, CrearClienteDto } from '../clientes';
+import { ActualizarClienteDto, ClientesService } from '../clientes';
 import {
   ActualizarBorradorDto,
   ComprobantePdfService,
@@ -34,14 +34,17 @@ import {
   CargarItemsDto,
   ClientePublicoDto,
   ComprobantePublicoDto,
+  ClienteVinculadoDto,
   ComprobantesPaginadosDto,
   ConfiguracionPublicaDto,
+  CrearClienteApiDto,
   EmitirApiDto,
   GenerarBorradoresApiDto,
   ItemPublicoDto,
   ListarComprobantesApiQuery,
   PadronDto,
   ResultadoCargaDto,
+  VincularReferenciaDto,
 } from './dto/api-publica.dto';
 import { Idempotente, IdempotenciaInterceptor } from './idempotencia/idempotencia.interceptor';
 import {
@@ -175,6 +178,34 @@ export class V1Controller {
     return this.clientes.consultarPadron(auth.tenantId, cuit);
   }
 
+  @ApiOperation({
+    summary: 'Clientes asociados a tus ids',
+    description: 'Hasta 200 (`?referencia=a&referencia=b`). Solo vuelven los que ya están asociados. Scope `items:write`.',
+  })
+  @ApiOkResponse({ type: [ClienteVinculadoDto] })
+  @ApiKey('items:write')
+  @Get('clientes/referencias')
+  async clientesPorReferencia(@CurrentAuth() auth: AuthContext, @Query('referencia') referencia?: string | string[]): Promise<ClienteVinculadoDto[]> {
+    const refs = (Array.isArray(referencia) ? referencia : referencia ? [referencia] : []).slice(0, 200);
+    if (!refs.length) throw new BadRequestException('Indicá al menos una referencia (?referencia=…).');
+    const mapa = await this.clientes.porReferencias(auth.tenantId, auth.origenIntegracion ?? 'API', refs);
+    const clientes = await Promise.all([...new Set(mapa.values())].map((id) => this.clientes.obtener(auth.tenantId, id)));
+    const porId = new Map(clientes.map((c) => [c.id, c]));
+    return [...mapa].map(([referenciaExterna, id]) => ({ referenciaExterna, cliente: clientePublico(porId.get(id)!) }));
+  }
+
+  @ApiOperation({ summary: 'Asociar un cliente a tu id', description: 'Para usar un cliente que ya existe en el Facturador. Scope `items:write`.' })
+  @ApiOkResponse({ type: ClienteVinculadoDto })
+  @ApiKey('items:write')
+  @Post('clientes/:id/referencias')
+  @HttpCode(200)
+  async vincularCliente(@CurrentAuth() auth: AuthContext, @Param('id') id: string, @Body() dto: VincularReferenciaDto): Promise<ClienteVinculadoDto> {
+    const cliente = await this.clientes.obtener(auth.tenantId, id);
+    const referenciaExterna = dto.referenciaExterna.trim();
+    await this.clientes.vincularReferencia(auth.tenantId, auth.origenIntegracion ?? 'API', referenciaExterna, cliente.id);
+    return { referenciaExterna, cliente: clientePublico(cliente) };
+  }
+
   @ApiOperation({ summary: 'Ver un cliente', description: 'Scope `items:write`.' })
   @ApiOkResponse({ type: ClientePublicoDto })
   @ApiKey('items:write')
@@ -183,14 +214,22 @@ export class V1Controller {
     return clientePublico(await this.clientes.obtener(auth.tenantId, id));
   }
 
-  @ApiOperation({ summary: 'Dar de alta un cliente', description: 'Valida el documento (dígito verificador del CUIT). `409` si ya existe. Scope `items:write`.' })
+  @ApiOperation({
+    summary: 'Dar de alta un cliente',
+    description: 'Valida el documento (dígito verificador del CUIT). `409` si ya existe. Con `referenciaExterna` queda asociado a tu id. Scope `items:write`.',
+  })
   @ApiHeader(CLAVE_IDEMPOTENCIA)
   @ApiOkResponse({ type: ClientePublicoDto })
   @ApiKey('items:write')
   @Idempotente()
   @Post('clientes')
-  async crearCliente(@CurrentAuth() auth: AuthContext, @Body() dto: CrearClienteDto): Promise<ClientePublicoDto> {
-    return clientePublico(await this.clientes.crear(auth.tenantId, dto));
+  async crearCliente(@CurrentAuth() auth: AuthContext, @Body() dto: CrearClienteApiDto): Promise<ClientePublicoDto> {
+    const { referenciaExterna, ...datos } = dto;
+    const cliente = await this.clientes.crear(auth.tenantId, datos);
+    if (referenciaExterna?.trim()) {
+      await this.clientes.vincularReferencia(auth.tenantId, auth.origenIntegracion ?? 'API', referenciaExterna.trim(), cliente.id);
+    }
+    return clientePublico(cliente);
   }
 
   @ApiOperation({ summary: 'Modificar un cliente', description: 'Scope `items:write`.' })

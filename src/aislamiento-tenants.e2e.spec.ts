@@ -187,6 +187,7 @@ const hayBase = Boolean(process.env.DATABASE_URL);
       ['POST', `/v1/comprobantes/${a.comprobante}/verificar`],
       ['POST', '/v1/comprobantes', { clienteId: a.cliente, puntoVentaId: a.puntoVenta, fechaEmision: '2026-09-29', concepto: 'PRODUCTOS', lineas: [{ descripcion: 'x', cantidad: '1', unidad: 'UNIDAD', precioUnitario: '1', alicuotaIva: '21' }] }],
       ['GET', `/v1/clientes/${a.cliente}`],
+      ['POST', `/v1/clientes/${a.cliente}/referencias`, { referenciaExterna: 'robada' }],
       ['PATCH', `/v1/clientes/${a.cliente}`, { razonSocial: 'Hackeado' }],
     ];
     const pasaron: string[] = [];

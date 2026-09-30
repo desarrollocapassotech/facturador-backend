@@ -178,9 +178,15 @@ const hayBase = Boolean(process.env.DATABASE_URL);
       numeroDocumento: padron.body.cuit,
       condicionIva: padron.body.condicionIva,
       domicilio: padron.body.domicilio,
+      referenciaExterna: 'cli-42',
     });
     expect(alta.status).toBe(201);
     clienteId = alta.body.id;
+    const vinculados = await api('GET', '/clientes/referencias?referencia=cli-42&referencia=cli-sin-alta');
+    expect(vinculados.body).toEqual([{ referenciaExterna: 'cli-42', cliente: expect.objectContaining({ id: clienteId }) }]);
+    const revinculado = await api('POST', `/clientes/${clienteId}/referencias`, { referenciaExterna: 'cli-43' });
+    expect(revinculado).toMatchObject({ status: 200, body: { referenciaExterna: 'cli-43', cliente: { id: clienteId } } });
+    expect((await api('POST', '/clientes/no-existe/referencias', { referenciaExterna: 'x' })).status).toBe(404);
     expect(
       (
         await api('POST', '/clientes', {
