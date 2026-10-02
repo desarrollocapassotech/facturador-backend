@@ -5,13 +5,13 @@ services:
     region: ohio # igual que Vialto
     plan: free
     branch: main
-    buildCommand: npm ci && npm run build && npx prisma migrate deploy
+    buildCommand: npm ci --include=dev && npm run build && npx prisma migrate deploy # --include=dev: con NODE_ENV=production npm saltea el CLI de Nest, typescript y prisma
     startCommand: npm run start:prod
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: 22
-      - key: NODE_ENV # activa las restricciones de producción (webhooks solo https y sin IPs internas; tracker https)
+      - key: NODE_ENV # activa las restricciones de producción (webhooks solo https y sin IPs internas)
         value: production
       - key: DATABASE_URL # Neon rama production, con pooler
         sync: false
