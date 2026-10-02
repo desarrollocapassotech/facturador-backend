@@ -98,6 +98,24 @@ export class TenantsService {
     });
   }
 
+  /**
+   * En homologación, si no hay ningún punto de venta activo para ese ambiente, se crea el 1
+   * (ARCA homologación acepta cualquier número): así se puede probar sin configurar nada.
+   * En producción no se toca: el punto de venta tiene que estar dado de alta en ARCA.
+   */
+  async asegurarPuntoVentaHomologacion(tenantId: string, ambiente: 'HOMOLOGACION' | 'PRODUCCION') {
+    if (ambiente !== 'HOMOLOGACION') return;
+    const activos = await this.prisma.puntoVenta.count({ where: { tenantId, ambiente: 'HOMOLOGACION', activo: true } });
+    if (activos) return;
+    // upsert: si dos pedidos llegan juntos no choca con el unique (tenantId, ambiente, numero).
+    // Si el 1 existe pero alguien lo desactivó, se respeta y no se crea otro.
+    await this.prisma.puntoVenta.upsert({
+      where: { tenantId_ambiente_numero: { tenantId, ambiente: 'HOMOLOGACION', numero: 1 } },
+      create: { tenantId, ambiente: 'HOMOLOGACION', numero: 1, descripcion: 'Homologación (por defecto)' },
+      update: {},
+    });
+  }
+
   async crearPuntoVenta(tenantId: string, dto: CrearPuntoVentaDto) {
     try {
       return await this.prisma.puntoVenta.create({

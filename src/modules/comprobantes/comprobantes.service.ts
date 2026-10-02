@@ -343,6 +343,7 @@ export class ComprobantesService {
     if (!items.length) throw new BadRequestException('No hay ítems válidos para facturar (¿confirmaste la importación?).');
 
     const emisor = await this.tenants.obtenerEmisor(auth.tenantId);
+    if (!dto.puntoVentaId) await this.tenants.asegurarPuntoVentaHomologacion(auth.tenantId, emisor.ambienteArca);
     const pv = dto.puntoVentaId
       ? await this.puntoVentaValido(auth.tenantId, dto.puntoVentaId, emisor.ambienteArca)
       : await this.prisma.puntoVenta.findFirst({

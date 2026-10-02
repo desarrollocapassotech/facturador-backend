@@ -98,7 +98,9 @@ export class V1Controller {
   @ApiKey('comprobantes:read')
   @Get('configuracion')
   async configuracion(@CurrentAuth() auth: AuthContext): Promise<ConfiguracionPublicaDto> {
-    const [emisor, puntosVenta] = await Promise.all([this.tenants.obtenerEmisor(auth.tenantId), this.tenants.listarPuntosVenta(auth.tenantId)]);
+    const emisor = await this.tenants.obtenerEmisor(auth.tenantId);
+    await this.tenants.asegurarPuntoVentaHomologacion(auth.tenantId, emisor.ambienteArca);
+    const puntosVenta = await this.tenants.listarPuntosVenta(auth.tenantId);
     return configuracionPublica({ emisor, puntosVenta });
   }
 
