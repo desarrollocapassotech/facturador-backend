@@ -1,4 +1,4 @@
-import { mapearError } from './arca-errores';
+import { esPersonaInexistente, mapearError } from './arca-errores';
 import { ArcaError } from './arca.types';
 
 function errorSdk(status: number | undefined, data: unknown, message = 'Request failed') {
@@ -45,5 +45,17 @@ describe('mapearError', () => {
     const r = mapearError(errorSdk(400, { message: 'ImpTotal es requerido' }), true);
     expect(r.tipo).toBe('RECHAZO');
     expect(r.message).toContain('ImpTotal es requerido');
+  });
+});
+
+describe('esPersonaInexistente', () => {
+  it('CUIT que no está en el padrón (422 de AfipSDK) → true', () => {
+    const err = errorSdk(422, { message: 'soap:Server: No existe persona con ese Id', statusCode: 422 });
+    expect(esPersonaInexistente(err)).toBe(true);
+  });
+
+  it('otras fallas del padrón → false', () => {
+    expect(esPersonaInexistente(errorSdk(502, 'Bad Gateway'))).toBe(false);
+    expect(esPersonaInexistente(errorSdk(401, { message: 'Unauthorized' }))).toBe(false);
   });
 });

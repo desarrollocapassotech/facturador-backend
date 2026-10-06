@@ -20,6 +20,19 @@ export function esIpPrivada(ip: string): boolean {
   return false;
 }
 
+/** Traduce un error de red de fetch/dns (que solo dice "fetch failed") a algo que el usuario entienda. */
+export function mensajeErrorConexion(err: unknown): string {
+  const e = err as { name?: string; message?: string; code?: string; cause?: { code?: string } } | null;
+  const codigo = e?.cause?.code ?? e?.code ?? '';
+  if (codigo === 'ENOTFOUND' || codigo === 'EAI_AGAIN') return 'No se encontró el dominio de la URL (DNS).';
+  if (codigo === 'ECONNREFUSED') return 'El servidor del receptor rechazó la conexión.';
+  if (codigo === 'ECONNRESET' || codigo === 'UND_ERR_SOCKET') return 'El receptor cortó la conexión.';
+  if (codigo === 'ETIMEDOUT' || codigo === 'UND_ERR_CONNECT_TIMEOUT') return 'No se pudo conectar con el receptor (tiempo agotado).';
+  if (/CERT|SSL|TLS|SELF_SIGNED|UNABLE_TO_VERIFY/i.test(codigo)) return 'El certificado HTTPS del receptor no es válido.';
+  const msg = e?.message ?? String(err);
+  return codigo ? `No se pudo conectar con el receptor (${codigo}).` : msg === 'fetch failed' ? 'No se pudo conectar con el receptor.' : msg;
+}
+
 export function validarUrlWebhook(cruda: string, produccion: boolean): string {
   let u: URL;
   try {

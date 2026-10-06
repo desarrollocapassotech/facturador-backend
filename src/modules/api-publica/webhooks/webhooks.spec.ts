@@ -1,6 +1,6 @@
 import { createHmac } from 'crypto';
 import { firmar, generarSecreto, MAX_INTENTOS, proximoIntento, verificarFirma } from './firma';
-import { esIpPrivada, validarUrlWebhook } from './url-webhook';
+import { esIpPrivada, mensajeErrorConexion, validarUrlWebhook } from './url-webhook';
 
 describe('firma de webhooks', () => {
   const secreto = 'whsec_prueba';
@@ -64,5 +64,26 @@ describe('URL de webhook', () => {
       expect(esIpPrivada(ip)).toBe(true);
     }
     for (const ip of ['8.8.8.8', '172.32.0.1', '200.45.1.1', '2800:3f0::1']) expect(esIpPrivada(ip)).toBe(false);
+  });
+});
+
+describe('mensaje de error de conexión', () => {
+  const fetchFallido = (code: string) => Object.assign(new TypeError('fetch failed'), { cause: Object.assign(new Error(code), { code }) });
+
+  it.each([
+    ['ENOTFOUND', /dominio/],
+    ['ECONNREFUSED', /rechazó/],
+    ['CERT_HAS_EXPIRED', /certificado/],
+    ['EHOSTUNREACH', /\(EHOSTUNREACH\)/],
+  ])('traduce %s', (code, mensaje) => {
+    expect(mensajeErrorConexion(fetchFallido(code))).toMatch(mensaje);
+  });
+
+  it('el error del lookup DNS (code directo) también', () => {
+    expect(mensajeErrorConexion(Object.assign(new Error('getaddrinfo ENOTFOUND x'), { code: 'ENOTFOUND' }))).toMatch(/dominio/);
+  });
+
+  it('nunca deja el "fetch failed" pelado', () => {
+    expect(mensajeErrorConexion(new TypeError('fetch failed'))).toBe('No se pudo conectar con el receptor.');
   });
 });

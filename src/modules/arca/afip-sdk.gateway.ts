@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Afip from '@afipsdk/afip.js';
 import { ArcaAuditService } from './arca-audit.service';
-import { mapearError } from './arca-errores';
+import { esPersonaInexistente, mapearError } from './arca-errores';
 import type { ArcaGateway, ContextoLlamada } from './arca.gateway';
 import {
   ArcaError,
@@ -187,7 +187,14 @@ export class AfipSdkGateway implements ArcaGateway {
 
   consultarPadron(c: CredencialesArca, cuit: string) {
     return this.llamar(c, 'ws_sr_constancia_inscripcion', { cuit }, undefined, false, async (afip) => {
-      const r = (await afip.RegisterInscriptionProof.getTaxpayerDetails(Number(cuit))) as Obj | null;
+      let r: Obj | null;
+      try {
+        r = (await afip.RegisterInscriptionProof.getTaxpayerDetails(Number(cuit))) as Obj | null;
+      } catch (err) {
+        // El CUIT no está en el padrón: no es una falla de ARCA, es "sin datos".
+        if (esPersonaInexistente(err)) return null;
+        throw err;
+      }
       return r ? mapearPadron(cuit, r) : null;
     });
   }

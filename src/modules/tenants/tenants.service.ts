@@ -123,7 +123,7 @@ export class TenantsService {
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new ConflictException(`Ya existe el punto de venta ${dto.numero} para ${dto.ambiente.toLowerCase()}.`);
+        throw new ConflictException(`Ya existe el punto de venta ${dto.numero} en ${dto.ambiente === 'PRODUCCION' ? 'producción' : 'homologación'}.`);
       }
       throw err;
     }

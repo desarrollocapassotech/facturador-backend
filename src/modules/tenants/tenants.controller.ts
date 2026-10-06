@@ -47,7 +47,10 @@ export class TenantsController {
   }
 
   @Get('puntos-venta')
-  puntosVenta(@CurrentAuth() auth: AuthContext) {
+  async puntosVenta(@CurrentAuth() auth: AuthContext) {
+    // Igual que la API pública: en homologación siempre hay un punto de venta para probar.
+    const emisor = await this.tenants.obtenerEmisor(auth.tenantId);
+    await this.tenants.asegurarPuntoVentaHomologacion(auth.tenantId, emisor.ambienteArca);
     return this.tenants.listarPuntosVenta(auth.tenantId);
   }
 

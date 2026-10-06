@@ -12,7 +12,7 @@ import { ComprobantesService } from '../../comprobantes';
 import { ImportacionesService, ItemsFacturablesService } from '../../importaciones';
 import { comprobantePublico, importacionPublica, type ComprobanteInterno } from '../representaciones';
 import { EVENTO_PRUEBA, firmar, generarSecreto, MAX_INTENTOS, proximoIntento } from './firma';
-import { esIpPrivada, validarUrlWebhook } from './url-webhook';
+import { esIpPrivada, mensajeErrorConexion, validarUrlWebhook } from './url-webhook';
 
 const LOTE = 25;
 const TIMEOUT_MS = 10_000;
@@ -274,7 +274,7 @@ export class WebhooksService {
       await res.body?.cancel().catch(() => undefined);
       return res.ok ? { ok: true, status: res.status, error: null } : { ok: false, status: res.status, error: `El receptor respondió ${res.status}.` };
     } catch (err) {
-      const msg = (err as Error).name === 'TimeoutError' ? `Sin respuesta en ${TIMEOUT_MS / 1000} s.` : (err as Error).message;
+      const msg = (err as Error).name === 'TimeoutError' ? `Sin respuesta en ${TIMEOUT_MS / 1000} s.` : mensajeErrorConexion(err);
       return { ok: false, status: null, error: msg };
     }
   }

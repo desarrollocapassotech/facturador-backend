@@ -92,6 +92,12 @@ export function enriquecer(mensaje: string): string {
   return mensaje;
 }
 
+/** El padrón responde "No existe persona con ese Id" cuando el CUIT no figura: es "sin datos", no una falla. */
+export function esPersonaInexistente(err: unknown): boolean {
+  const detalle = extraerDetalle((err as Obj | null)?.data) ?? extraerDetalle(err);
+  return /no existe persona/i.test(detalle ?? '');
+}
+
 /**
  * Convierte cualquier error del SDK en ArcaError.
  * `enviado`: la operación pudo haber llegado a ARCA (solo FECAESolicitar importa: define si el
