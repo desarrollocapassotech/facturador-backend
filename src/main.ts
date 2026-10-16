@@ -16,10 +16,12 @@ async function bootstrap() {
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
   );
   app.enableCors({
+    // El navegador manda el origen sin barra final: "https://x.com/" en la variable no coincidiría nunca.
     origin: config
       .getOrThrow<string>('FRONTEND_URL')
       .split(',')
-      .map((o) => o.trim()),
+      .map((o) => o.trim().replace(/\/+$/, ''))
+      .filter(Boolean),
   });
   app.enableShutdownHooks();
   configurarSwagger(app); // /api/docs (UI) y /api/docs/openapi.json

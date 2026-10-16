@@ -30,7 +30,7 @@ Proyecto Neon `facturador`, rama `production`.
 | `JWT_SECRET` | la genera Render |
 | `FACTURADOR_ENCRYPTION_KEY` | 32+ caracteres aleatorios; **no se cambia nunca** |
 | `AFIP_SDK_API_KEY` | token de AfipSDK |
-| `FRONTEND_URL` | URL del static site (CORS y enlaces de acceso) |
+| `FRONTEND_URL` | Dominios del frontend, separados por coma (CORS). El **primero** se usa para los enlaces de acceso: poné primero el dominio propio. Ej.: `https://facturador.capasso.tech,https://facturador-frontend.onrender.com` |
 | `NODE_ENV` | `production` (ya está en `render.yaml`: exige https en webhooks y tracker, y bloquea IPs internas) |
 
 | Variable (frontend) | Valor |
