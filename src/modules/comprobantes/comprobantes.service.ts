@@ -33,6 +33,8 @@ const INCLUDE_DETALLE = {
   puntoVenta: true,
   asociado: { select: { id: true, tipo: true, numero: true, fechaEmision: true, importeTotal: true, puntoVenta: { select: { numero: true } } } },
   asociadosDesde: { select: { id: true, tipo: true, numero: true, estado: true, importeTotal: true } },
+  // Los ítems quedan asociados aunque se editen las líneas: el integrador los usa para leer sus metadatos.
+  items: { select: { referenciaExterna: true, metadatos: true }, orderBy: { createdAt: 'asc' } },
 } satisfies Prisma.ComprobanteInclude;
 
 export type ComprobanteDetalle = Prisma.ComprobanteGetPayload<{ include: typeof INCLUDE_DETALLE }>;

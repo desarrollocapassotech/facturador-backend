@@ -292,6 +292,7 @@ const hayBase = Boolean(process.env.DATABASE_URL);
           moneda: 'USD',
           alicuotaIva: '21',
           periodo: { desde: '2026-09-01', hasta: '2026-09-30' },
+          metadatos: { proyectoId: 'web', tipoCambio: 1540 },
         },
       ],
     });
@@ -304,6 +305,11 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     expect(borradores.status).toBe(201);
     const factura = borradores.body.comprobantes[0];
     expect(factura).toMatchObject({ moneda: 'USD', importes: { total: '363' } });
+    // El comprobante devuelve los metadatos del integrador, sin las claves internas del staging.
+    const detalle = (await api('GET', `/comprobantes/${factura.id}`)).body;
+    expect(detalle.items).toEqual([
+      { referenciaExterna: 'sistema:cli:web:2026-09', metadatos: { proyectoId: 'web', tipoCambio: 1540 } },
+    ]);
 
     const emitida = await api('POST', `/comprobantes/${factura.id}/emitir`, {
       version: factura.version,

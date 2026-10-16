@@ -61,6 +61,15 @@ export interface ComprobanteInterno {
   }>;
   asociado: { id: string; tipo: string; numero: number | null } | null;
   asociadosDesde?: Array<{ id: string; tipo: string; numero: number | null; estado: string }>;
+  items?: Array<{ referenciaExterna: string; metadatos: unknown }>;
+}
+
+/** Claves que agrega el staging a los metadatos: no son del integrador y no se devuelven. */
+const METADATOS_INTERNOS = ['precioDeTarifa', 'tarifaId', 'descripcionOriginal', 'valoresOriginales'];
+
+export function metadatosPublicos(m: unknown): Record<string, unknown> {
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return {};
+  return Object.fromEntries(Object.entries(m).filter(([k]) => !METADATOS_INTERNOS.includes(k)));
 }
 
 export function clientePublico(c: ComprobanteInterno['cliente']): ClientePublicoDto {
@@ -115,6 +124,7 @@ export function comprobantePublico(c: ComprobanteInterno): ComprobantePublicoDto
     asociado: c.asociado ? { id: c.asociado.id, tipo: c.asociado.tipo, numero: c.asociado.numero } : null,
     notas: (c.asociadosDesde ?? []).map((n) => ({ id: n.id, tipo: n.tipo, numero: n.numero, estado: n.estado })),
     observaciones: c.observaciones ?? null,
+    items: (c.items ?? []).map((i) => ({ referenciaExterna: i.referenciaExterna, metadatos: metadatosPublicos(i.metadatos) })),
     advertenciaLetra: c.advertenciaLetra ?? null,
     error:
       c.errorMensaje && (c.estado === 'RECHAZADO' || c.estado === 'PENDIENTE_VERIFICACION')

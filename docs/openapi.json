@@ -2226,6 +2226,23 @@
           "estado"
         ]
       },
+      "ItemDelComprobanteDto": {
+        "type": "object",
+        "properties": {
+          "referenciaExterna": {
+            "type": "string"
+          },
+          "metadatos": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Los `metadatos` que mandaste con el ítem."
+          }
+        },
+        "required": [
+          "referenciaExterna",
+          "metadatos"
+        ]
+      },
       "ErrorComprobanteDto": {
         "type": "object",
         "properties": {
@@ -2341,6 +2358,13 @@
             "type": "string",
             "nullable": true
           },
+          "items": {
+            "description": "Ítems facturados en este comprobante, con tu referencia y tus metadatos (vacío si se cargó a mano).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemDelComprobanteDto"
+            }
+          },
           "advertenciaLetra": {
             "type": "string",
             "nullable": true,
@@ -2384,6 +2408,7 @@
           "asociado",
           "notas",
           "observaciones",
+          "items",
           "advertenciaLetra",
           "error",
           "emitidoEn"

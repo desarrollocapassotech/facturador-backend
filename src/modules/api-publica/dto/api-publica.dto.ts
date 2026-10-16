@@ -385,6 +385,12 @@ export class PeriodoPublicoDto {
   hasta: string;
 }
 
+export class ItemDelComprobanteDto {
+  referenciaExterna: string;
+  /** Los `metadatos` que mandaste con el ítem. */
+  metadatos: Record<string, unknown>;
+}
+
 export class ComprobantePublicoDto {
   id: string;
   /** FACTURA_A, NOTA_CREDITO_B, … */
@@ -414,6 +420,8 @@ export class ComprobantePublicoDto {
   /** Notas de crédito o débito hechas sobre esta factura. */
   notas: NotaAsociadaDto[];
   observaciones: string | null;
+  /** Ítems facturados en este comprobante, con tu referencia y tus metadatos (vacío si se cargó a mano). */
+  items: ItemDelComprobanteDto[];
   /** Aviso si la letra elegida no es la habitual para el emisor y el cliente. */
   advertenciaLetra: string | null;
   /** Motivo del rechazo de ARCA o del estado pendiente. */
