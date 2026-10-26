@@ -359,6 +359,32 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     expect(listado.body.total).toBe(2);
   });
 
+  it('recibo sin validez fiscal: devuelve el PDF y no guarda nada', async () => {
+    const antes = await prisma.comprobante.count({ where: { tenantId } });
+    const recibo = await api('POST', '/recibos/pdf', {
+      tipo: 'COBRO',
+      fecha: '2026-10-26',
+      moneda: 'ARS',
+      contraparte: { nombre: 'Cliente del Exterior LLC' },
+      items: [{ descripcion: 'Horas de septiembre 2026', cantidad: '10 h', importe: '308000.00' }],
+      total: '308000.00',
+    });
+    expect(recibo).toMatchObject({ status: 200, body: { tipo: 'application/pdf' } });
+    expect(recibo.body.bytes).toBeGreaterThan(1000);
+    expect(await prisma.comprobante.count({ where: { tenantId } })).toBe(antes);
+
+    // Total que no coincide con los conceptos → 400.
+    const mal = await api('POST', '/recibos/pdf', {
+      tipo: 'COBRO',
+      fecha: '2026-10-26',
+      moneda: 'ARS',
+      contraparte: { nombre: 'X' },
+      items: [{ descripcion: 'x', importe: '10.00' }],
+      total: '11.00',
+    });
+    expect(mal.status).toBe(400);
+  });
+
   it('X-Usuario-Email inválido se rechaza', async () => {
     expect(
       (await api('GET', '/configuracion', undefined, { 'X-Usuario-Email': 'no-es-email' })).status,

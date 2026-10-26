@@ -7,5 +7,6 @@ import { RecibosService } from './recibos.service';
   imports: [TenantsModule],
   controllers: [RecibosController],
   providers: [RecibosService],
+  exports: [RecibosService],
 })
 export class RecibosModule {}

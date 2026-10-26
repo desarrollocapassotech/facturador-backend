@@ -8,10 +8,11 @@ import { IdempotenciaService } from './idempotencia/idempotencia.service';
 import { V1Controller } from './v1.controller';
 import { WebhooksController } from './webhooks/webhooks.controller';
 import { WebhooksService } from './webhooks/webhooks.service';
+import { RecibosModule } from '../recibos';
 
 /** API pública (/api/v1), idempotencia y webhooks salientes (ARCHITECTURE.md §4 y §8.5). */
 @Module({
-  imports: [ImportacionesModule, ComprobantesModule, ClientesModule, TenantsModule],
+  imports: [ImportacionesModule, ComprobantesModule, ClientesModule, TenantsModule, RecibosModule],
   controllers: [V1Controller, WebhooksController],
   providers: [IdempotenciaService, IdempotenciaInterceptor, WebhooksService],
 })

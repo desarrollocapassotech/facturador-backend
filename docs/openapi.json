@@ -1185,6 +1185,47 @@
           "API pública"
         ]
       }
+    },
+    "/api/v1/recibos/pdf": {
+      "post": {
+        "description": "Devuelve el PDF de un recibo de cobro o de pago con los datos y el logo del emisor y la leyenda \"Documento no válido como factura\". No pasa por ARCA ni se guarda: sirve, por ejemplo, para clientes del exterior. Scope `comprobantes:write`.",
+        "operationId": "V1Controller_recibo",
+        "parameters": [
+          {
+            "name": "X-Usuario-Email",
+            "in": "header",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerarReciboDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "api-key": []
+          }
+        ],
+        "summary": "Generar un recibo (sin validez fiscal)",
+        "tags": [
+          "API pública"
+        ]
+      }
     }
   },
   "info": {
@@ -1517,6 +1558,133 @@
         "required": [
           "clase",
           "motivo"
+        ]
+      },
+      "ParteDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "documento": {
+            "type": "string",
+            "description": "Ya formateado: \"CUIT 20-12345678-9\", \"DNI 12.345.678\".",
+            "maxLength": 60
+          },
+          "domicilio": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "nombre"
+        ]
+      },
+      "ItemReciboDto": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "cantidad": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "importe": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "descripcion",
+          "importe"
+        ]
+      },
+      "ComprobanteAplicadoDto": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "importe": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "descripcion",
+          "importe"
+        ]
+      },
+      "GenerarReciboDto": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "enum": [
+              "COBRO",
+              "PAGO"
+            ],
+            "type": "string"
+          },
+          "numero": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "fecha": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "moneda": {
+            "enum": [
+              "ARS",
+              "USD"
+            ],
+            "type": "string"
+          },
+          "contraparte": {
+            "$ref": "#/components/schemas/ParteDto"
+          },
+          "items": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemReciboDto"
+            }
+          },
+          "total": {
+            "type": "string"
+          },
+          "medioPago": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "observaciones": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "comprobantesAplicados": {
+            "description": "Solo COBRO.",
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComprobanteAplicadoDto"
+            }
+          },
+          "periodo": {
+            "type": "string",
+            "description": "Solo PAGO.",
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "tipo",
+          "fecha",
+          "moneda",
+          "contraparte",
+          "items",
+          "total"
         ]
       },
       "EmisorPublicoDto": {

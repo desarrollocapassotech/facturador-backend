@@ -28,6 +28,7 @@ import {
   EmisionService,
 } from '../comprobantes';
 import { ImportacionesService, type ItemFacturableInput } from '../importaciones';
+import { GenerarReciboDto, RecibosService } from '../recibos';
 import { TenantsService } from '../tenants';
 import {
   BorradoresGeneradosDto,
@@ -86,6 +87,7 @@ export class V1Controller {
     private readonly pdf: ComprobantePdfService,
     private readonly clientes: ClientesService,
     private readonly tenants: TenantsService,
+    private readonly recibos: RecibosService,
   ) {}
 
   // ── Configuración (solo lectura) ─────────────────────────────────────────
@@ -393,5 +395,25 @@ export class V1Controller {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Cache-Control', 'private, no-store');
     res.send(buffer);
+  }
+
+  // ── Recibos ──────────────────────────────────────────────────────────────
+
+  @ApiOperation({
+    summary: 'Generar un recibo (sin validez fiscal)',
+    description:
+      'Devuelve el PDF de un recibo de cobro o de pago con los datos y el logo del emisor y la leyenda "Documento no válido como factura". No pasa por ARCA ni se guarda: sirve, por ejemplo, para clientes del exterior. Scope `comprobantes:write`.',
+  })
+  @ApiProduces('application/pdf')
+  @ApiBody({ type: GenerarReciboDto })
+  @ApiKey('comprobantes:write')
+  @Post('recibos/pdf')
+  @HttpCode(200)
+  async recibo(@CurrentAuth() auth: AuthContext, @Body() dto: GenerarReciboDto, @Res() res: Response) {
+    const { pdf, filename } = await this.recibos.generar(auth.tenantId, dto);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(pdf);
   }
 }
