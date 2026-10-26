@@ -275,7 +275,7 @@ export class EmisionService {
     this.eventos.emit(EVENTOS.COMPROBANTE_RECHAZADO, { tenantId, comprobanteId: id, intento: intentos } satisfies EventoComprobante);
   }
 
-  /** Una factura queda ANULADA cuando sus NC emitidas cubren el total. */
+  /** Una factura queda ANULADA cuando sus NC emitidas cubren el total; sus ítems se liberan para refacturarlos. */
   private async actualizarAnulacion(tenantId: string, facturaId: string) {
     const factura = await this.prisma.comprobante.findUnique({ where: { tenantId_id: { tenantId, id: facturaId } } });
     if (!factura) return;
@@ -286,6 +286,7 @@ export class EmisionService {
     const acreditado = notas.reduce((s, n) => s.plus(n.importeTotal.toString()), new Decimal(0));
     if (acreditado.gte(factura.importeTotal.toString()) && factura.estado === 'EMITIDO') {
       await this.prisma.comprobante.update({ where: { tenantId_id: { tenantId, id: facturaId } }, data: { estado: 'ANULADO' } });
+      await this.items.liberarAnulados(tenantId, facturaId);
     }
   }
 

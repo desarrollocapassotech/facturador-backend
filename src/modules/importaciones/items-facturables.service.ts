@@ -55,6 +55,14 @@ export class ItemsFacturablesService {
     });
   }
 
+  /** La factura quedó anulada (nota de crédito por el total): sus ítems se pueden volver a facturar. */
+  async liberarAnulados(tenantId: string, facturaId: string) {
+    await this.prisma.itemFacturable.updateMany({
+      where: { tenantId, comprobanteId: facturaId, estado: 'FACTURADO' },
+      data: { estado: 'VALIDO', comprobanteId: null },
+    });
+  }
+
   /** El comprobante se emitió: sus ítems quedan facturados. */
   async marcarFacturados(tenantId: string, comprobanteId: string) {
     await this.prisma.itemFacturable.updateMany({

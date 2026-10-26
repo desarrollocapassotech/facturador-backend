@@ -222,4 +222,29 @@ const hayBase = Boolean(process.env.DATABASE_URL);
     expect(e.estado).toBe('EMITIDO');
     expect((await comprobantes.obtener(tenantId, f.id)).estado).toBe('ANULADO');
   });
+
+  it('al anular la factura sus ítems quedan libres para volver a facturarlos', async () => {
+    const b = await borrador();
+    const item = await prisma.itemFacturable.create({
+      data: {
+        tenantId,
+        origen: 'TRACKER',
+        referenciaExterna: `tracker:${randomUUID()}`,
+        clienteId,
+        descripcion: 'Desarrollo',
+        cantidad: '10',
+        unidad: 'HORA',
+        precioUnitario: '1000',
+        alicuotaIva: '21',
+        hashContenido: 'x',
+        estado: 'EN_BORRADOR',
+        comprobanteId: b.id,
+      },
+    });
+    const f = await emision.emitir(auth, b.id, b.version, `k-${randomUUID()}`);
+    expect((await prisma.itemFacturable.findUniqueOrThrow({ where: { id: item.id } })).estado).toBe('FACTURADO');
+    const nc = await comprobantes.crearNota(auth, f.id, { clase: 'NOTA_CREDITO', motivo: 'Error de facturación' });
+    await emision.emitir(auth, nc.id, nc.version, `k-${randomUUID()}`);
+    expect(await prisma.itemFacturable.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({ estado: 'VALIDO', comprobanteId: null });
+  });
 });
