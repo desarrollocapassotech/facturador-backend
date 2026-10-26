@@ -24,6 +24,9 @@ function slug(texto: string): string {
 }
 
 /** Arma los datos del PDF desde el comprobante emitido (sus snapshots) y la plantilla del tenant. */
+/** Rótulo del documento del receptor en el PDF. */
+const ROTULO_DOCUMENTO: Record<string, string> = { CUIT: 'CUIT', CUIL: 'CUIL', DNI: 'DNI', PASAPORTE: 'Pasaporte' };
+
 @Injectable()
 export class ComprobantePdfService {
   constructor(
@@ -76,10 +79,13 @@ export class ComprobantePdfService {
       },
       receptor: {
         razonSocial: receptor.razonSocial,
+        documentoTipo: receptor.numeroDocumento === '0' ? 'Documento' : (ROTULO_DOCUMENTO[receptor.tipoDocumento] ?? 'Documento'),
         documento:
           receptor.numeroDocumento === '0'
             ? 'Sin identificar'
-            : `${receptor.tipoDocumento} ${receptor.tipoDocumento === 'CUIT' || receptor.tipoDocumento === 'CUIL' ? formatearCuit(receptor.numeroDocumento) : receptor.numeroDocumento}`,
+            : receptor.tipoDocumento === 'CUIT' || receptor.tipoDocumento === 'CUIL'
+              ? formatearCuit(receptor.numeroDocumento)
+              : receptor.numeroDocumento,
         condicionIva: receptor.condicionIva,
         domicilio: receptor.domicilio,
       },

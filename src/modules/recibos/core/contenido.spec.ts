@@ -36,7 +36,7 @@ describe('armarContenido', () => {
     expect(c.encabezado.nombre).toBe('Empresa Demo SA');
     expect(c.fecha).toBe('28/09/2026');
     expect(c.cuerpo).toBe(
-      'Recibí de Cliente SRL (CUIT 30-70000000-7) la suma de PESOS CIENTO UN MIL QUINIENTOS CON 50/100 ($ 101.500,50) ' +
+      'Recibí de Cliente SRL (CUIT 30-70000000-7) la suma de PESOS CIENTO UN MIL QUINIENTOS CON CINCUENTA CENTAVOS ($ 101.500,50) ' +
         'en concepto de Pago Factura A 00001-00000045; Intereses.',
     );
     expect(c.total).toBe('$ 101.500,50');
@@ -51,7 +51,7 @@ describe('armarContenido', () => {
     expect(c.titulo).toBe('RECIBO DE PAGO');
     expect(c.encabezado.nombre).toBe('Empresa Demo SA');
     expect(c.cuerpo).toBe(
-      'Recibí de Empresa Demo SA (CUIT 30-71234567-1) la suma de DÓLARES ESTADOUNIDENSES DOS MIL CUATROCIENTOS CON 00/100 ' +
+      'Recibí de Empresa Demo SA (CUIT 30-71234567-1) la suma de DÓLARES ESTADOUNIDENSES DOS MIL CUATROCIENTOS ' +
         '(US$ 2.400,00) en concepto de Desarrollo, correspondiente a Septiembre 2026.',
     );
     expect(c.firma).toEqual({ etiqueta: 'Firma y aclaración del beneficiario', nombre: 'Ana Pérez', documento: 'DNI 30.123.456' });

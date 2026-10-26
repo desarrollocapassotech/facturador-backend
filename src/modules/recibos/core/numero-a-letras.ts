@@ -41,10 +41,16 @@ function entero(n: number): string {
   return partes.join(' ');
 }
 
-/** 123450n (centavos) → "PESOS MIL DOSCIENTOS TREINTA Y CUATRO CON 50/100" */
+/** " CON CINCUENTA CENTAVOS", " CON UN CENTAVO"; sin centavos, nada. */
+function conCentavos(centavos: number): string {
+  if (centavos === 0) return '';
+  return ` CON ${dosDigitos(centavos)} ${centavos === 1 ? 'CENTAVO' : 'CENTAVOS'}`;
+}
+
+/** 123450n (centavos) → "PESOS MIL DOSCIENTOS TREINTA Y CUATRO CON CINCUENTA CENTAVOS"; sin centavos, sin "CON …". */
 export function centavosEnLetras(centavos: bigint, moneda: 'ARS' | 'USD'): string {
   const ent = Number(centavos / 100n);
-  const dec = String(centavos % 100n).padStart(2, '0');
+  const dec = Number(centavos % 100n);
   const nombre = moneda === 'USD' ? 'DÓLARES ESTADOUNIDENSES' : 'PESOS';
-  return `${nombre} ${entero(ent)} CON ${dec}/100`;
+  return `${nombre} ${entero(ent)}${conCentavos(dec)}`;
 }

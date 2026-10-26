@@ -63,23 +63,28 @@ export class PdfComprobanteRenderer {
     y = this.receptor(doc, d, y);
 
     const discrimina = d.letra === 'A';
-    const cols = discrimina
-      ? [
-          { t: 'Descripción', w: 205, a: 'left' as const },
-          { t: 'Cantidad', w: 58, a: 'right' as const },
-          { t: 'Precio unit.', w: 70, a: 'right' as const },
-          { t: '% Bonif.', w: 40, a: 'right' as const },
-          { t: 'Subtotal', w: 70, a: 'right' as const },
-          { t: 'IVA %', w: 36, a: 'right' as const },
-          { t: 'Subtotal c/IVA', w: CW - 479, a: 'right' as const },
-        ]
-      : [
-          { t: 'Descripción', w: 261, a: 'left' as const },
-          { t: 'Cantidad', w: 64, a: 'right' as const },
-          { t: 'Precio unit.', w: 80, a: 'right' as const },
-          { t: '% Bonif.', w: 44, a: 'right' as const },
-          { t: 'Subtotal', w: CW - 449, a: 'right' as const },
-        ];
+    // La bonificación solo se muestra si alguna línea la tiene (casi nunca): su ancho va a la descripción.
+    const conBonif = d.lineas.some((l) => Number(l.bonificacionPct) !== 0);
+    const bonif = conBonif ? 40 : 0;
+    const cols = (
+      discrimina
+        ? [
+            { t: 'Descripción', w: 245 - bonif, a: 'left' as const },
+            { t: 'Cantidad', w: 58, a: 'right' as const },
+            { t: 'Precio unit.', w: 70, a: 'right' as const },
+            ...(conBonif ? [{ t: '% Bonif.', w: bonif, a: 'right' as const, bonif: true }] : []),
+            { t: 'Subtotal', w: 70, a: 'right' as const },
+            { t: 'IVA %', w: 36, a: 'right' as const },
+            { t: 'Subtotal c/IVA', w: CW - 479, a: 'right' as const },
+          ]
+        : [
+            { t: 'Descripción', w: 305 - bonif, a: 'left' as const },
+            { t: 'Cantidad', w: 64, a: 'right' as const },
+            { t: 'Precio unit.', w: 80, a: 'right' as const },
+            ...(conBonif ? [{ t: '% Bonif.', w: bonif, a: 'right' as const, bonif: true }] : []),
+            { t: 'Subtotal', w: CW - 449, a: 'right' as const },
+          ]
+    ) as Array<{ t: string; w: number; a: 'left' | 'right'; bonif?: boolean }>;
 
     const encabezadoTabla = (yy: number) => {
       doc.rect(M, yy, CW, 16).fill(e.colorPrimario);
@@ -98,9 +103,11 @@ export class PdfComprobanteRenderer {
       const unitario = conIva
         ? Number(l.precioUnitario) * (1 + Number(l.alicuotaIva) / 100)
         : Number(l.precioUnitario);
-      const celdas = discrimina
+      const todas = discrimina
         ? [l.descripcion, `${fmtCantidad(l.cantidad)} ${UNIDAD[l.unidad] ?? ''}`, fmt(l.precioUnitario), fmt(l.bonificacionPct), fmt(l.importeNeto), fmt(l.alicuotaIva), fmt(l.importeTotal)]
         : [l.descripcion, `${fmtCantidad(l.cantidad)} ${UNIDAD[l.unidad] ?? ''}`, fmt(unitario), fmt(l.bonificacionPct), fmt(conIva ? l.importeTotal : l.importeNeto)];
+      // Sin la columna de bonificación se saca su celda (es la cuarta en los dos formatos).
+      const celdas = conBonif ? todas : todas.filter((_, i) => i !== 3);
 
       doc.fontSize(7.5).font('Helvetica');
       const alto = Math.max(16, ...celdas.map((v, i) => doc.heightOfString(v, { width: cols[i].w - 6 }) + 8));
@@ -147,8 +154,8 @@ export class PdfComprobanteRenderer {
     let ey = y + 8;
     if (e.logo) {
       try {
-        doc.image(e.logo, M + 8, ey, { fit: [110, 40] });
-        ey += 46;
+        doc.image(e.logo, M + 8, ey, { fit: [160, 58] });
+        ey += 64;
       } catch {
         // logo ilegible: se omite
       }
@@ -187,7 +194,7 @@ export class PdfComprobanteRenderer {
     const colW = CW / 2 - 12;
     const izq = [
       ['Cliente', d.receptor.razonSocial],
-      ['Documento', d.receptor.documento],
+      [d.receptor.documentoTipo, d.receptor.documento],
       ['Condición IVA', d.receptor.condicionIva],
       ['Domicilio', d.receptor.domicilio || '-'],
     ];
@@ -201,16 +208,19 @@ export class PdfComprobanteRenderer {
           ]
         : []),
     ];
-    const filas = Math.max(izq.length, der.length);
-    const alto = 10 + filas * 12;
+    // Cada dato ocupa lo que necesita: si un valor largo baja de renglón, los siguientes se corren.
+    const dibujar = (items: string[][], x: number) => {
+      let yy = y + 6;
+      for (const [k, v] of items) {
+        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#000').text(`${k}: `, x, yy, { width: colW, continued: true })
+          .font('Helvetica').fillColor('#222').text(v, { width: colW });
+        yy = Math.max(doc.y, yy + 10) + 2;
+      }
+      return yy;
+    };
+    const fin = Math.max(dibujar(izq, M + 8), dibujar(der, M + CW / 2 + 4));
+    const alto = fin - y + 4;
     doc.rect(M, y, CW, alto).lineWidth(0.8).stroke('#999');
-    const dibujar = (items: string[][], x: number) =>
-      items.forEach(([k, v], i) => {
-        doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#000').text(`${k}: `, x, y + 6 + i * 12, { width: colW, continued: true, lineBreak: false })
-          .font('Helvetica').fillColor('#222').text(v, { width: colW, lineBreak: false, ellipsis: true });
-      });
-    dibujar(izq, M + 8);
-    dibujar(der, M + CW / 2 + 4);
     return y + alto + 6;
   }
 

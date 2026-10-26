@@ -17,7 +17,9 @@ export interface ComprobantePdfData {
   };
   receptor: {
     razonSocial: string;
-    documento: string; // "CUIT 30-66834690-8"
+    /** Qué documento es: "CUIT", "CUIL", "DNI"… (se usa como rótulo en el PDF). */
+    documentoTipo: string;
+    documento: string; // "30-66834690-8"
     condicionIva: string;
     domicilio?: string | null;
   };

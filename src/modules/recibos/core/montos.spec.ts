@@ -23,8 +23,8 @@ describe('montos', () => {
   });
 
   it('importe en letras', () => {
-    expect(centavosEnLetras(18150000n, 'ARS')).toBe('PESOS CIENTO OCHENTA Y UN MIL QUINIENTOS CON 00/100');
-    expect(centavosEnLetras(150n, 'USD')).toBe('DÓLARES ESTADOUNIDENSES UN CON 50/100');
-    expect(centavosEnLetras(100000000n, 'ARS')).toBe('PESOS UN MILLÓN CON 00/100');
+    expect(centavosEnLetras(18150000n, 'ARS')).toBe('PESOS CIENTO OCHENTA Y UN MIL QUINIENTOS');
+    expect(centavosEnLetras(150n, 'USD')).toBe('DÓLARES ESTADOUNIDENSES UN CON CINCUENTA CENTAVOS');
+    expect(centavosEnLetras(100000000n, 'ARS')).toBe('PESOS UN MILLÓN');
   });
 });

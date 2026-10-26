@@ -40,9 +40,15 @@ function entero(n: number): string {
   return partes.join(' ');
 }
 
-/** 1234.5 → "PESOS UN MIL DOSCIENTOS TREINTA Y CUATRO CON 50/100" (formato usual en comprobantes). */
+/** " CON CINCUENTA CENTAVOS", " CON UN CENTAVO"; sin centavos, nada. */
+function conCentavos(centavos: number): string {
+  if (centavos === 0) return '';
+  return ` CON ${dosDigitos(centavos)} ${centavos === 1 ? 'CENTAVO' : 'CENTAVOS'}`;
+}
+
+/** 1234.5 → "PESOS MIL DOSCIENTOS TREINTA Y CUATRO CON CINCUENTA CENTAVOS"; 1234 → "PESOS MIL DOSCIENTOS TREINTA Y CUATRO". */
 export function importeEnLetras(importe: string | number, moneda: 'ARS' | 'USD'): string {
   const [ent, dec = '0'] = Number(importe).toFixed(2).split('.');
   const nombre = moneda === 'USD' ? 'DÓLARES ESTADOUNIDENSES' : 'PESOS';
-  return `${nombre} ${entero(Number(ent))} CON ${dec.padEnd(2, '0')}/100`;
+  return `${nombre} ${entero(Number(ent))}${conCentavos(Number(dec.padEnd(2, '0')))}`;
 }
