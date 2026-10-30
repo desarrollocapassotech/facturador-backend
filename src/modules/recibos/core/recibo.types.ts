@@ -51,6 +51,8 @@ export interface ReciboEstilo {
   colorPrimario?: string; // #RRGGBB
   colorSecundario?: string;
   textoPie?: string;
+  /** Línea y leyenda para firmar (por defecto sí); sin ella, al pie quedan solo nombre y documento. */
+  lineaFirma?: boolean;
 }
 
 export interface ReciboOutput {

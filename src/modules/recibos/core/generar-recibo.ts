@@ -130,12 +130,14 @@ function dibujar(doc: PDFKit.PDFDocument, c: ContenidoRecibo, estilo: ReciboEsti
     y = doc.y + 4;
   }
 
-  // Firma: al pie de la página (o en una nueva si no entra).
+  // Firma: al pie de la página (o en una nueva si no entra). Sin línea, solo nombre y documento.
   if (y + FIRMA_ALTO > limite) y = nuevaPagina();
   const fy = Math.max(y + 30, limite - FIRMA_ALTO + 30);
   const fx = M + CW - 220;
-  doc.moveTo(fx, fy).lineTo(fx + 220, fy).lineWidth(0.8).stroke('#000');
-  doc.fontSize(8).font('Helvetica').fillColor('#444').text(c.firma.etiqueta, fx, fy + 4, { width: 220, align: 'center' });
+  if (estilo.lineaFirma !== false) {
+    doc.moveTo(fx, fy).lineTo(fx + 220, fy).lineWidth(0.8).stroke('#000');
+    doc.fontSize(8).font('Helvetica').fillColor('#444').text(c.firma.etiqueta, fx, fy + 4, { width: 220, align: 'center' });
+  }
   doc.fontSize(9).font('Helvetica-Bold').fillColor('#000').text(c.firma.nombre, fx, fy + 16, { width: 220, align: 'center' });
   if (c.firma.documento) {
     doc.fontSize(8).font('Helvetica').fillColor('#444').text(c.firma.documento, fx, doc.y + 1, { width: 220, align: 'center' });
@@ -145,16 +147,14 @@ function dibujar(doc: PDFKit.PDFDocument, c: ContenidoRecibo, estilo: ReciboEsti
 
 function encabezado(doc: PDFKit.PDFDocument, c: ContenidoRecibo, estilo: ReciboEstilo, col: Colores): number {
   const y = M;
-  const alto = 96;
   const mitad = M + CW * 0.55;
-  doc.rect(M, y, CW, alto).lineWidth(0.8).stroke('#999');
 
   // Quien encabeza (el tenant): logo y datos.
   let ey = y + 10;
   if (estilo.logo?.length) {
     try {
-      doc.image(Buffer.from(estilo.logo), M + 10, ey, { fit: [120, 40] });
-      ey += 46;
+      doc.image(Buffer.from(estilo.logo), M + 10, ey, { fit: [180, 64] });
+      ey += 70;
     } catch {
       // logo ilegible: se omite
     }
@@ -164,6 +164,10 @@ function encabezado(doc: PDFKit.PDFDocument, c: ContenidoRecibo, estilo: ReciboE
   doc.fontSize(8).font('Helvetica').fillColor('#333');
   if (c.encabezado.documento) doc.text(c.encabezado.documento, { width: anchoIzq });
   if (c.encabezado.domicilio) doc.text(c.encabezado.domicilio, { width: anchoIzq });
+
+  // El recuadro crece con el logo y los datos (como mínimo, lo que ocupa la columna del título).
+  const alto = Math.max(96, doc.y - y + 10);
+  doc.rect(M, y, CW, alto).lineWidth(0.8).stroke('#999');
 
   // Título, número y fecha.
   doc.moveTo(mitad, y).lineTo(mitad, y + alto).stroke('#999');

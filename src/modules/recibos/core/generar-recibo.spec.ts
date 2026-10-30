@@ -38,6 +38,14 @@ describe('generarRecibo', () => {
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   });
 
+  it('sin línea de firma no lleva la leyenda para firmar', async () => {
+    const texto = async (lineaFirma: boolean) => (await generarRecibo(base, { lineaFirma })).pdf.toString('latin1');
+    // pdfkit escribe el texto en hexadecimal: se busca una palabra de la leyenda ("Firma").
+    const firma = Buffer.from('Firma').toString('hex');
+    expect((await texto(true)).toLowerCase()).toContain(firma);
+    expect((await texto(false)).toLowerCase()).not.toContain(firma);
+  });
+
   it('valida antes de dibujar', async () => {
     await expect(generarRecibo({ ...base, total: '1' })).rejects.toThrow(ReciboInvalidoError);
   });

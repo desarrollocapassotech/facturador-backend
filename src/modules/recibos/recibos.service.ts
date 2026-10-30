@@ -36,7 +36,9 @@ export class RecibosService {
         logoMime: plantilla.logoMime ?? undefined,
         colorPrimario: plantilla.colorPrimario,
         colorSecundario: plantilla.colorSecundario,
-        textoPie: plantilla.textoPie ?? undefined,
+        // El pie de la plantilla (datos para el pago) es para las facturas: en el recibo no va.
+        // En el de cobro no se firma: quedan el nombre y el CUIT de quien cobra.
+        lineaFirma: dto.tipo !== 'COBRO',
       });
     } catch (err) {
       if (err instanceof ReciboInvalidoError) throw new BadRequestException(err.message);
