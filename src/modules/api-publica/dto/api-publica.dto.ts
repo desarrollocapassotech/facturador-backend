@@ -62,9 +62,9 @@ export class AltaClienteDto {
   email?: string;
 }
 
-/** Cómo identificar al cliente: por id del Facturador, por documento o por tu propio id. */
+/** Cómo identificar al cliente: por id de Faktia, por documento o por tu propio id. */
 export class ClienteRefDto {
-  /** Id del cliente en el Facturador. */
+  /** Id del cliente en Faktia. */
   @IsOptional()
   @IsString()
   @MaxLength(50)
@@ -81,7 +81,7 @@ export class ClienteRefDto {
   @MaxLength(20)
   numeroDocumento?: string;
 
-  /** Id del cliente en tu sistema. Se asocia al cliente del Facturador la primera vez que se resuelve. */
+  /** Id del cliente en tu sistema. Se asocia al cliente de Faktia la primera vez que se resuelve. */
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -171,7 +171,7 @@ export class CargarItemsDto {
   @ArrayMaxSize(1000)
   items: ItemApiDto[];
 
-  /** Texto para reconocer el lote en el Facturador. */
+  /** Texto para reconocer el lote en Faktia. */
   @IsOptional()
   @IsString()
   @MaxLength(200)
@@ -184,7 +184,7 @@ export class CargarItemsDto {
 }
 
 export class GenerarBorradoresApiDto {
-  /** Ids de ítems del Facturador. */
+  /** Ids de ítems de Faktia. */
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

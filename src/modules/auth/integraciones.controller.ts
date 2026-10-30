@@ -39,7 +39,7 @@ export class AccesoController {
   @ApiOperation({
     summary: 'Pedir un token de acceso de un solo uso',
     description:
-      'Tu backend pide el token para el email del usuario (si no existe en el Facturador, se crea sin contraseña) y redirige al navegador a la `url` devuelta. Vale 60 s y se usa una vez. `destino` es una ruta interna del Facturador (ej. `/importaciones`). Scope `acceso:emitir`.',
+      'Tu backend pide el token para el email del usuario (si no existe en Faktia, se crea sin contraseña) y redirige al navegador a la `url` devuelta. Vale 60 s y se usa una vez. `destino` es una ruta interna de Faktia (ej. `/importaciones`). Scope `acceso:emitir`.',
   })
   @ApiOkResponse({ schema: { properties: { url: { type: 'string' }, expiraEn: { type: 'string', format: 'date-time' } } } })
   @ApiKey('acceso:emitir')

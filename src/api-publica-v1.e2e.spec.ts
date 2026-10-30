@@ -1,5 +1,5 @@
 /**
- * Flujo completo de un sistema integrado por la API pública (sin tocar la UI del Facturador):
+ * Flujo completo de un sistema integrado por la API pública (sin tocar la UI de Faktia):
  * leer la configuración, dar de alta un cliente con el padrón, cargar ítems, armar y editar
  * borradores, emitir, hacer una nota de crédito y bajar el PDF. Con `X-Usuario-Email` queda
  * registrado quién hizo cada cosa. Levanta la app completa con ARCA falso; corre contra una base

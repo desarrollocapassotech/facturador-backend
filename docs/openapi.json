@@ -3,7 +3,7 @@
   "paths": {
     "/api/v1/acceso/tokens": {
       "post": {
-        "description": "Tu backend pide el token para el email del usuario (si no existe en el Facturador, se crea sin contraseña) y redirige al navegador a la `url` devuelta. Vale 60 s y se usa una vez. `destino` es una ruta interna del Facturador (ej. `/importaciones`). Scope `acceso:emitir`.",
+        "description": "Tu backend pide el token para el email del usuario (si no existe en Faktia, se crea sin contraseña) y redirige al navegador a la `url` devuelta. Vale 60 s y se usa una vez. `destino` es una ruta interna de Faktia (ej. `/importaciones`). Scope `acceso:emitir`.",
         "operationId": "AccesoController_emitir",
         "parameters": [],
         "requestBody": {
@@ -50,13 +50,13 @@
     },
     "/api/v1/configuracion": {
       "get": {
-        "description": "Datos para armar comprobantes. La configuración se edita solo desde el Facturador. Scope `comprobantes:read`.",
+        "description": "Datos para armar comprobantes. La configuración se edita solo desde Faktia. Scope `comprobantes:read`.",
         "operationId": "V1Controller_configuracion",
         "parameters": [
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -94,7 +94,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -149,7 +149,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -195,7 +195,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -241,7 +241,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -296,7 +296,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -343,7 +343,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -400,7 +400,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -446,7 +446,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -487,13 +487,13 @@
     },
     "/api/v1/clientes/{id}/referencias": {
       "post": {
-        "description": "Para usar un cliente que ya existe en el Facturador. Scope `items:write`.",
+        "description": "Para usar un cliente que ya existe en Faktia. Scope `items:write`.",
         "operationId": "V1Controller_vincularCliente",
         "parameters": [
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -549,7 +549,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -593,7 +593,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -649,7 +649,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -704,7 +704,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -785,7 +785,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -842,7 +842,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -886,7 +886,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -940,7 +940,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -979,7 +979,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -1044,7 +1044,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -1090,7 +1090,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -1155,7 +1155,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -1194,7 +1194,7 @@
           {
             "name": "X-Usuario-Email",
             "in": "header",
-            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.",
+            "description": "Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.",
             "required": false,
             "schema": {
               "type": "string"
@@ -1229,8 +1229,8 @@
     }
   },
   "info": {
-    "title": "Facturador — API pública",
-    "description": "\nAPI para que otros sistemas carguen lo que hay que facturar, generen borradores, emitan en ARCA y reciban avisos.\n\n## Autenticación\nHeader `X-Api-Key: fct_…`. Las claves se crean en **Configuración → Integraciones**, con estos permisos:\n`items:write` (cargar ítems y clientes), `comprobantes:write` (borradores y emisión), `comprobantes:read` (consultar y PDF)\ny `acceso:emitir` (token de acceso sin doble login). Las rutas de la API no aceptan la sesión de un usuario.\n\n## Idempotencia\nLos `POST` aceptan `Idempotency-Key` (8 a 100 caracteres: letras, números, `-` o `_`). Con la misma clave y el mismo\nrequest se devuelve la misma respuesta durante 24 h (header `Idempotent-Replayed: true`); con otro request, `422`;\nsi el primero sigue en curso, `409`. **Emitir la exige**: reintentar con la misma clave nunca emite dos veces.\n\nAdemás, los ítems son idempotentes por `referenciaExterna`: reenviar uno igual no lo duplica.\n\n## Flujo típico\n1. `POST /api/v1/items` con `confirmar: true`.\n2. `POST /api/v1/comprobantes/borradores` con tus `referencias`.\n3. `POST /api/v1/comprobantes/{id}/emitir` con `Idempotency-Key`.\n4. Recibís `comprobante.emitido` (o `comprobante.rechazado`) por webhook, y `GET …/pdf`.\n\n## Webhooks\nSe configuran en **Configuración → Webhooks**. Eventos: `comprobante.emitido`, `comprobante.rechazado`,\n`importacion.confirmada`. Cada entrega es un `POST` JSON:\n\n```json\n{ \"id\": \"evt_…\", \"evento\": \"comprobante.emitido\", \"creadoEn\": \"2026-09-29T12:00:00.000Z\",\n  \"datos\": { \"comprobante\": { … }, \"items\": [{ \"id\": \"…\", \"origen\": \"API\", \"referenciaExterna\": \"…\" }] } }\n```\n\nHeaders: `X-Facturador-Evento`, `X-Facturador-Evento-Id` (usalo para deduplicar: puede llegar más de una vez) y\n`X-Facturador-Firma: t=<unix>,v1=<hex>`, con `v1 = HMAC_SHA256(secreto, t + \".\" + cuerpo_crudo)`.\nRespondé `2xx` en menos de 10 s. Si no, se reintenta a los 1 m, 5 m, 30 m, 2 h y 12 h (6 intentos).\n\nVerificación en Node:\n```js\nconst { createHmac, timingSafeEqual } = require('crypto');\nfunction valido(secreto, cuerpoCrudo, cabecera) {\n  const { t, v1 } = Object.fromEntries(cabecera.split(',').map((p) => p.split('=')));\n  if (Math.abs(Date.now() / 1000 - Number(t)) > 300) return false; // evita replays\n  const esperado = createHmac('sha256', secreto).update(t + '.' + cuerpoCrudo).digest();\n  return esperado.length === 32 && timingSafeEqual(esperado, Buffer.from(v1, 'hex'));\n}\n```\n\n## Ambiente\nMientras la empresa esté en **homologación**, los comprobantes no tienen validez fiscal (campo `ambiente`).\n",
+    "title": "Faktia — API pública",
+    "description": "\nAPI para que otros sistemas carguen lo que hay que facturar, generen borradores, emitan en ARCA y reciban avisos.\n\n## Autenticación\nHeader `X-Api-Key: fct_…`. Las claves se crean en **Configuración → Integraciones**, con estos permisos:\n`items:write` (cargar ítems y clientes), `comprobantes:write` (borradores y emisión), `comprobantes:read` (consultar y PDF)\ny `acceso:emitir` (token de acceso sin doble login). Las rutas de la API no aceptan la sesión de un usuario.\n\n## Idempotencia\nLos `POST` aceptan `Idempotency-Key` (8 a 100 caracteres: letras, números, `-` o `_`). Con la misma clave y el mismo\nrequest se devuelve la misma respuesta durante 24 h (header `Idempotent-Replayed: true`); con otro request, `422`;\nsi el primero sigue en curso, `409`. **Emitir la exige**: reintentar con la misma clave nunca emite dos veces.\n\nAdemás, los ítems son idempotentes por `referenciaExterna`: reenviar uno igual no lo duplica.\n\n## Flujo típico\n1. `POST /api/v1/items` con `confirmar: true`.\n2. `POST /api/v1/comprobantes/borradores` con tus `referencias`.\n3. `POST /api/v1/comprobantes/{id}/emitir` con `Idempotency-Key`.\n4. Recibís `comprobante.emitido` (o `comprobante.rechazado`) por webhook, y `GET …/pdf`.\n\n## Webhooks\nSe configuran en **Configuración → Webhooks**. Eventos: `comprobante.emitido`, `comprobante.rechazado`,\n`importacion.confirmada`. Cada entrega es un `POST` JSON:\n\n```json\n{ \"id\": \"evt_…\", \"evento\": \"comprobante.emitido\", \"creadoEn\": \"2026-09-29T12:00:00.000Z\",\n  \"datos\": { \"comprobante\": { … }, \"items\": [{ \"id\": \"…\", \"origen\": \"API\", \"referenciaExterna\": \"…\" }] } }\n```\n\nHeaders: `X-Faktia-Evento`, `X-Faktia-Evento-Id` (usalo para deduplicar: puede llegar más de una vez) y\n`X-Faktia-Firma: t=<unix>,v1=<hex>`, con `v1 = HMAC_SHA256(secreto, t + \".\" + cuerpo_crudo)`.\nPor compatibilidad también llegan con los nombres anteriores (`X-Facturador-*`), que se van a dejar de mandar.\nRespondé `2xx` en menos de 10 s. Si no, se reintenta a los 1 m, 5 m, 30 m, 2 h y 12 h (6 intentos).\n\nVerificación en Node:\n```js\nconst { createHmac, timingSafeEqual } = require('crypto');\nfunction valido(secreto, cuerpoCrudo, cabecera) {\n  const { t, v1 } = Object.fromEntries(cabecera.split(',').map((p) => p.split('=')));\n  if (Math.abs(Date.now() / 1000 - Number(t)) > 300) return false; // evita replays\n  const esperado = createHmac('sha256', secreto).update(t + '.' + cuerpoCrudo).digest();\n  return esperado.length === 32 && timingSafeEqual(esperado, Buffer.from(v1, 'hex'));\n}\n```\n\n## Ambiente\nMientras la empresa esté en **homologación**, los comprobantes no tienen validez fiscal (campo `ambiente`).\n",
     "version": "1.0",
     "contact": {}
   },
@@ -1785,7 +1785,7 @@
         "properties": {
           "clienteId": {
             "type": "string",
-            "description": "Id del cliente en el Facturador.",
+            "description": "Id del cliente en Faktia.",
             "maxLength": 50
           },
           "tipoDocumento": {
@@ -1806,7 +1806,7 @@
           },
           "referenciaExterna": {
             "type": "string",
-            "description": "Id del cliente en tu sistema. Se asocia al cliente del Facturador la primera vez que se resuelve.",
+            "description": "Id del cliente en tu sistema. Se asocia al cliente de Faktia la primera vez que se resuelve.",
             "maxLength": 200
           },
           "alta": {
@@ -1917,7 +1917,7 @@
           },
           "descripcion": {
             "type": "string",
-            "description": "Texto para reconocer el lote en el Facturador.",
+            "description": "Texto para reconocer el lote en Faktia.",
             "maxLength": 200
           },
           "confirmar": {
@@ -2586,7 +2586,7 @@
         "type": "object",
         "properties": {
           "itemIds": {
-            "description": "Ids de ítems del Facturador.",
+            "description": "Ids de ítems de Faktia.",
             "maxItems": 2000,
             "type": "array",
             "items": {

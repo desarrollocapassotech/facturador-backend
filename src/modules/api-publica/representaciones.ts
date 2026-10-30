@@ -203,7 +203,7 @@ export interface ConfiguracionInterna {
   puntosVenta: Array<{ id: string; numero: number; ambiente: string; descripcion: string | null; activo: boolean }>;
 }
 
-/** Datos de solo lectura para armar comprobantes desde otro sistema (la configuración se edita en el Facturador). */
+/** Datos de solo lectura para armar comprobantes desde otro sistema (la configuración se edita en Faktia). */
 export function configuracionPublica(c: ConfiguracionInterna): ConfiguracionPublicaDto {
   return {
     emisor: {

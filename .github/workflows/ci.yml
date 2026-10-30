@@ -12,21 +12,21 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_USER: facturador
-          POSTGRES_PASSWORD: facturador
-          POSTGRES_DB: facturador
+          POSTGRES_USER: faktia
+          POSTGRES_PASSWORD: faktia
+          POSTGRES_DB: faktia
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U facturador"
+          --health-cmd "pg_isready -U faktia"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://facturador:facturador@localhost:5432/facturador
-      DIRECT_URL: postgresql://facturador:facturador@localhost:5432/facturador
+      DATABASE_URL: postgresql://faktia:faktia@localhost:5432/faktia
+      DIRECT_URL: postgresql://faktia:faktia@localhost:5432/faktia
       JWT_SECRET: ci-secreto-de-prueba-con-mas-de-32-caracteres
       FRONTEND_URL: http://localhost:5173
-      FACTURADOR_ENCRYPTION_KEY: ci-clave-de-cifrado-con-mas-de-32-caracteres
+      FAKTIA_ENCRYPTION_KEY: ci-clave-de-cifrado-con-mas-de-32-caracteres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -4,7 +4,7 @@ const ahora = new Date('2026-09-29T12:00:00Z');
 const base: DatosChequeo = {
   emisor: { razonSocial: 'Empresa SA', domicilioFiscal: 'Calle 1', inicioActividades: new Date('2020-01-01'), cuit: '30712345671' },
   afipSdkConfigurado: true,
-  certificado: { venceEl: new Date('2028-09-01'), alias: 'facturador' },
+  certificado: { venceEl: new Date('2028-09-01'), alias: 'faktia' },
   puntosVentaProduccion: [3],
   borradoresHomologacion: 0,
   ahora,

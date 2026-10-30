@@ -31,7 +31,7 @@ export class AccesoService {
       update: {},
       select: { id: true, activo: true },
     });
-    if (!usuario.activo) throw new ForbiddenException('El usuario está desactivado en el Facturador.');
+    if (!usuario.activo) throw new ForbiddenException('El usuario está desactivado en Faktia.');
 
     const { token, hash } = generarTokenAcceso();
     const destino = destinoSeguro(datos.destino);

@@ -131,7 +131,7 @@ export class WebhooksService {
         suscripcionId: s.id,
         evento: EVENTO_PRUEBA,
         eventoId: eventoId([tenantId, EVENTO_PRUEBA, s.id, String(Date.now())]),
-        payload: { mensaje: 'Evento de prueba del Facturador.' },
+        payload: { mensaje: 'Evento de prueba de Faktia.' },
       },
     });
     return this.entregarUna(entrega.id);
@@ -258,16 +258,21 @@ export class WebhooksService {
         const direcciones = await lookup(new URL(url).hostname, { all: true });
         if (direcciones.some((d) => esIpPrivada(d.address))) return { ok: false, status: null, error: 'La URL resuelve a una dirección interna.' };
       }
+      const firma = firmar(secreto, cuerpo);
       const res = await fetch(url, {
         method: 'POST',
         redirect: 'manual', // no seguir redirecciones (podrían llevar a la red interna)
         signal: AbortSignal.timeout(TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
-          'User-Agent': 'Facturador-Webhooks/1.0',
+          'User-Agent': 'Faktia-Webhooks/1.0',
+          'X-Faktia-Evento': e.evento,
+          'X-Faktia-Evento-Id': e.eventoId,
+          'X-Faktia-Firma': firma,
+          // Nombres viejos: se siguen mandando hasta que los receptores migren a X-Faktia-*.
           'X-Facturador-Evento': e.evento,
           'X-Facturador-Evento-Id': e.eventoId,
-          'X-Facturador-Firma': firmar(secreto, cuerpo),
+          'X-Facturador-Firma': firma,
         },
         body: cuerpo,
       });

@@ -66,7 +66,7 @@ const CLAVE_IDEMPOTENCIA = {
 const USUARIO = {
   name: 'X-Usuario-Email',
   required: false,
-  description: 'Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría del Facturador.',
+  description: 'Opcional: email de la persona que hace la acción en tu sistema. Queda en la auditoría de Faktia.',
 };
 
 const comprobante = (c: unknown) => comprobantePublico(c as ComprobanteInterno);
@@ -94,7 +94,7 @@ export class V1Controller {
 
   @ApiOperation({
     summary: 'Ver emisor y puntos de venta',
-    description: 'Datos para armar comprobantes. La configuración se edita solo desde el Facturador. Scope `comprobantes:read`.',
+    description: 'Datos para armar comprobantes. La configuración se edita solo desde Faktia. Scope `comprobantes:read`.',
   })
   @ApiOkResponse({ type: ConfiguracionPublicaDto })
   @ApiKey('comprobantes:read')
@@ -198,7 +198,7 @@ export class V1Controller {
     return [...mapa].map(([referenciaExterna, id]) => ({ referenciaExterna, cliente: clientePublico(porId.get(id)!) }));
   }
 
-  @ApiOperation({ summary: 'Asociar un cliente a tu id', description: 'Para usar un cliente que ya existe en el Facturador. Scope `items:write`.' })
+  @ApiOperation({ summary: 'Asociar un cliente a tu id', description: 'Para usar un cliente que ya existe en Faktia. Scope `items:write`.' })
   @ApiOkResponse({ type: ClienteVinculadoDto })
   @ApiKey('items:write')
   @Post('clientes/:id/referencias')

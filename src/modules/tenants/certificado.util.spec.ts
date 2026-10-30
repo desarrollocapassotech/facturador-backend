@@ -15,7 +15,7 @@ function generarCertificado(dias: number): { cert: string; key: string } | null 
       'openssl',
       [
         'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', keyPath, '-out', certPath,
-        '-days', String(dias), '-subj', '/CN=facturador-test/serialNumber=CUIT 20409378472',
+        '-days', String(dias), '-subj', '/CN=faktia-test/serialNumber=CUIT 20409378472',
       ],
       { stdio: 'ignore' },
     );
@@ -31,7 +31,7 @@ const d = par ? describe : describe.skip;
 d('analizarCertificado', () => {
   it('lee alias, CUIT, huella y vencimiento', () => {
     const info = analizarCertificado(par!.cert, par!.key);
-    expect(info.alias).toBe('facturador-test');
+    expect(info.alias).toBe('faktia-test');
     expect(info.cuitDelCertificado).toBe('20409378472');
     expect(info.huellaSha256).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
     expect(info.venceEl.getTime()).toBeGreaterThan(Date.now());

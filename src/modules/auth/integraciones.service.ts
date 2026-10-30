@@ -71,7 +71,7 @@ export class IntegracionesService {
       update: {},
       select: { id: true, activo: true },
     });
-    if (!usuario.activo) throw new ForbiddenException('El usuario está desactivado en el Facturador.');
+    if (!usuario.activo) throw new ForbiddenException('El usuario está desactivado en Faktia.');
     return { ...auth, usuarioId: usuario.id };
   }
 

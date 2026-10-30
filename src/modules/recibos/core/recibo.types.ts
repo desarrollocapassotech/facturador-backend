@@ -53,6 +53,13 @@ export interface ReciboEstilo {
   textoPie?: string;
   /** Línea y leyenda para firmar (por defecto sí); sin ella, al pie quedan solo nombre y documento. */
   lineaFirma?: boolean;
+  /** Tipografía TTF a usar en lugar de Helvetica (las que falten siguen en Helvetica). */
+  fuentes?: { normal?: Uint8Array; seminegrita?: Uint8Array; italica?: Uint8Array };
+  /**
+   * Dibuja algo a la derecha del pie de la última página (por ejemplo, la marca del sistema que generó
+   * el recibo), con el renglón arrancando en `y`. Devuelve el ancho que ocupó.
+   */
+  marcaPie?: (doc: PDFKit.PDFDocument, xDerecha: number, y: number) => number;
 }
 
 export interface ReciboOutput {

@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { dibujarGeneradoCon, fuentesPdf } from '../../shared/pdf/marca-pdf';
 import { formatearCuit } from '../../shared/util/cuit';
 import { TenantsService } from '../tenants';
 import { generarRecibo, ReciboInvalidoError, type Parte, type ReciboInput, type ReciboOutput } from './core';
 import { GenerarReciboDto } from './dto/recibos.dto';
 
-/** Adapta el generador puro al Facturador: la parte del tenant y el estilo salen de su configuración. */
+/** Adapta el generador puro a Faktia: la parte del tenant y el estilo salen de su configuración. */
 @Injectable()
 export class RecibosService {
   constructor(private readonly tenants: TenantsService) {}
@@ -30,6 +31,7 @@ export class RecibosService {
         ? { ...base, tipo: 'COBRO', emisor: tenant, pagador: dto.contraparte, comprobantesAplicados: dto.comprobantesAplicados }
         : { ...base, tipo: 'PAGO', pagador: tenant, beneficiario: dto.contraparte, periodo: dto.periodo };
 
+    const fuentes = fuentesPdf();
     try {
       return await generarRecibo(input, {
         logo: plantilla.logo ?? undefined,
@@ -39,6 +41,8 @@ export class RecibosService {
         // El pie de la plantilla (datos para el pago) es para las facturas: en el recibo no va.
         // En el de cobro no se firma: quedan el nombre y el CUIT de quien cobra.
         lineaFirma: dto.tipo !== 'COBRO',
+        fuentes: { normal: fuentes.normal, seminegrita: fuentes.seminegrita, italica: fuentes.italica },
+        marcaPie: dibujarGeneradoCon,
       });
     } catch (err) {
       if (err instanceof ReciboInvalidoError) throw new BadRequestException(err.message);

@@ -37,7 +37,7 @@ describe('firma de webhooks', () => {
 
 describe('URL de webhook', () => {
   it('acepta https públicas y normaliza', () => {
-    expect(validarUrlWebhook(' https://api.cliente.com/hooks/facturador?x=1 ', true)).toBe('https://api.cliente.com/hooks/facturador?x=1');
+    expect(validarUrlWebhook(' https://api.cliente.com/hooks/faktia?x=1 ', true)).toBe('https://api.cliente.com/hooks/faktia?x=1');
   });
 
   it('en desarrollo permite http y localhost', () => {

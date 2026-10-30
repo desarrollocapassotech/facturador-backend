@@ -191,9 +191,10 @@ const hayBase = Boolean(process.env.DATABASE_URL);
       expect(await prisma.webhookEntrega.findUniqueOrThrow({ where: { id: entrega.id } })).toMatchObject({ estado: 'ENTREGADA', intentos: 2 });
 
       const ultimo = recibidos[recibidos.length - 1];
-      expect(ultimo.headers['x-facturador-evento']).toBe(EVENTOS.IMPORTACION_CONFIRMADA);
-      expect(ultimo.headers['x-facturador-evento-id']).toBe('evt_prueba_1');
-      expect(verificarFirma(secreto, ultimo.cuerpo, String(ultimo.headers['x-facturador-firma']))).toBe(true);
+      expect(ultimo.headers['x-faktia-evento']).toBe(EVENTOS.IMPORTACION_CONFIRMADA);
+      expect(ultimo.headers['x-facturador-evento']).toBe(EVENTOS.IMPORTACION_CONFIRMADA); // nombre viejo, por compatibilidad
+      expect(ultimo.headers['x-faktia-evento-id']).toBe('evt_prueba_1');
+      expect(verificarFirma(secreto, ultimo.cuerpo, String(ultimo.headers['x-faktia-firma']))).toBe(true);
       expect(JSON.parse(ultimo.cuerpo)).toMatchObject({ id: 'evt_prueba_1', evento: EVENTOS.IMPORTACION_CONFIRMADA, datos: { importacion: { id: 'x' } } });
     });
 

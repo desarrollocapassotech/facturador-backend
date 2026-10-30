@@ -1,7 +1,7 @@
 import { isIP } from 'net';
 
 // Validación de la URL de un webhook. En producción: solo https y nunca direcciones internas
-// (evita usar el Facturador para pegarle a la red privada del servidor). Es un control sobre el
+// (evita usar Faktia para pegarle a la red privada del servidor). Es un control sobre el
 // texto de la URL; la resolución DNS a IPs privadas se vuelve a chequear al enviar.
 
 const HOSTS_LOCALES = ['localhost', 'localhost.localdomain', '0.0.0.0', 'metadata.google.internal'];

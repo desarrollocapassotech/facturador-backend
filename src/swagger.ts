@@ -31,8 +31,9 @@ Se configuran en **Configuración → Webhooks**. Eventos: \`comprobante.emitido
   "datos": { "comprobante": { … }, "items": [{ "id": "…", "origen": "API", "referenciaExterna": "…" }] } }
 \`\`\`
 
-Headers: \`X-Facturador-Evento\`, \`X-Facturador-Evento-Id\` (usalo para deduplicar: puede llegar más de una vez) y
-\`X-Facturador-Firma: t=<unix>,v1=<hex>\`, con \`v1 = HMAC_SHA256(secreto, t + "." + cuerpo_crudo)\`.
+Headers: \`X-Faktia-Evento\`, \`X-Faktia-Evento-Id\` (usalo para deduplicar: puede llegar más de una vez) y
+\`X-Faktia-Firma: t=<unix>,v1=<hex>\`, con \`v1 = HMAC_SHA256(secreto, t + "." + cuerpo_crudo)\`.
+Por compatibilidad también llegan con los nombres anteriores (\`X-Facturador-*\`), que se van a dejar de mandar.
 Respondé \`2xx\` en menos de 10 s. Si no, se reintenta a los 1 m, 5 m, 30 m, 2 h y 12 h (6 intentos).
 
 Verificación en Node:
@@ -53,7 +54,7 @@ Mientras la empresa esté en **homologación**, los comprobantes no tienen valid
 /** Documento OpenAPI de la API pública: solo las rutas /api/v1. */
 export function documentoOpenApi(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
-    .setTitle('Facturador — API pública')
+    .setTitle('Faktia — API pública')
     .setDescription(DESCRIPCION)
     .setVersion('1.0')
     .addApiKey({ type: 'apiKey', in: 'header', name: 'X-Api-Key', description: 'API key de la integración (fct_…).' }, 'api-key')
@@ -82,7 +83,7 @@ export function documentoOpenApi(app: INestApplication): OpenAPIObject {
 
 export function configurarSwagger(app: INestApplication) {
   SwaggerModule.setup('api/docs', app, documentoOpenApi(app), {
-    customSiteTitle: 'Facturador — API',
+    customSiteTitle: 'Faktia — API',
     swaggerOptions: { persistAuthorization: false, docExpansion: 'list', defaultModelsExpandDepth: 0 },
     jsonDocumentUrl: 'api/docs/openapi.json',
   });

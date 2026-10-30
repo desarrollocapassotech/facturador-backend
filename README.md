@@ -1,13 +1,13 @@
-# facturador-backend
+# faktia-backend
 
-Backend del Facturador electrónico multi-tenant. NestJS 10 + Prisma 6 + PostgreSQL (Neon).
+Backend de Faktia, sistema de facturación electrónica multi-tenant. NestJS 10 + Prisma 6 + PostgreSQL (Neon).
 La arquitectura completa está en `../ARCHITECTURE.md`.
 
 ## Puesta en marcha
 
 ```bash
 npm install                 # también corre prisma generate
-cp .env.example .env        # completar DATABASE_URL, DIRECT_URL, JWT_SECRET, FACTURADOR_ENCRYPTION_KEY y AFIP_SDK_API_KEY
+cp .env.example .env        # completar DATABASE_URL, DIRECT_URL, JWT_SECRET, FAKTIA_ENCRYPTION_KEY y AFIP_SDK_API_KEY
 npx prisma migrate deploy   # aplica las migraciones
 npm run start:dev           # http://localhost:3000/api
 ```
@@ -82,7 +82,7 @@ Todos requieren sesión (Bearer) y operan sobre el tenant de la sesión.
 - **Documentación**: Swagger en `/api/docs` (y `/api/docs/openapi.json`). Copia versionada en [`docs/openapi.json`](docs/openapi.json): se regenera con `npm run openapi` (corre en modo preview, sin base).
 - **API pública** `/api/v1/*` (módulo `api-publica`): `X-Api-Key` con scopes (`items:write`, `comprobantes:write`, `comprobantes:read`, `acceso:emitir`). No acepta la sesión de un usuario. Carga de ítems (`POST /v1/items`, idempotente por `referenciaExterna`), confirmación, clientes, borradores (por ids, referencias o importación), emisión (`Idempotency-Key` obligatoria), consulta y PDF.
 - **Idempotencia**: `Idempotency-Key` en los POST → `SolicitudIdempotente` (24 h). Mismo request devuelve la respuesta guardada (`Idempotent-Replayed: true`); otro request con la misma clave da `422`; en curso da `409`. Los 5xx no se guardan.
-- **Webhooks** (`/api/configuracion/webhooks`, sesión de usuario): eventos `comprobante.emitido`, `comprobante.rechazado` e `importacion.confirmada`, emitidos con `@nestjs/event-emitter` (quien emite no conoce a `api-publica`). Firma `X-Facturador-Firma: t=…,v1=HMAC_SHA256(secreto, t + "." + cuerpo)`, secreto cifrado y mostrado una vez. Reintentos a 1 m, 5 m, 30 m, 2 h y 12 h (6 intentos) con un cron cada 30 s. En producción (`NODE_ENV=production`): solo https, sin direcciones internas (también se revisa el DNS al enviar), sin seguir redirecciones.
+- **Webhooks** (`/api/configuracion/webhooks`, sesión de usuario): eventos `comprobante.emitido`, `comprobante.rechazado` e `importacion.confirmada`, emitidos con `@nestjs/event-emitter` (quien emite no conoce a `api-publica`). Firma `X-Faktia-Firma: t=…,v1=HMAC_SHA256(secreto, t + "." + cuerpo)` (por compatibilidad también se mandan los headers viejos `X-Facturador-*`), secreto cifrado y mostrado una vez. Reintentos a 1 m, 5 m, 30 m, 2 h y 12 h (6 intentos) con un cron cada 30 s. En producción (`NODE_ENV=production`): solo https, sin direcciones internas (también se revisa el DNS al enviar), sin seguir redirecciones.
 - **Importaciones**, tarifas, conexión al tracker, API keys y token de acceso: ver `PLAN.md` (Fase 4).
 
 ## Endpoints (Fase 3)

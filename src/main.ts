@@ -28,7 +28,7 @@ async function bootstrap() {
 
   const port = config.get<number>('PORT') ?? 3000;
   await app.listen(port);
-  new Logger('Bootstrap').log(`Facturador backend escuchando en :${port}`);
+  new Logger('Bootstrap').log(`Faktia backend escuchando en :${port}`);
 }
 
 void bootstrap();

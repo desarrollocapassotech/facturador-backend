@@ -363,7 +363,7 @@ model Cliente {
   @@map("clientes")
 }
 
-/// Mapea el id de un cliente en un sistema externo (ej. clients.id del tracker) al Cliente del Facturador.
+/// Mapea el id de un cliente en un sistema externo (ej. clients.id del tracker) al Cliente de Faktia.
 model ClienteReferenciaExterna {
   id                String     @id @default(cuid())
   tenantId          String

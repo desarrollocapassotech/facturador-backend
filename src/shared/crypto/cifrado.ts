@@ -5,10 +5,19 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypt
 const VERSION = 'v1';
 const IV_BYTES = 12;
 
+/**
+ * Clave de cifrado. El nombre nuevo es FAKTIA_ENCRYPTION_KEY; FACTURADOR_ENCRYPTION_KEY se sigue leyendo
+ * mientras haya entornos configurados con el nombre viejo (tiene que ser el mismo valor: cifra lo ya guardado).
+ */
+export function claveCifradoEnv(env: Record<string, unknown> = process.env): string | undefined {
+  const v = env.FAKTIA_ENCRYPTION_KEY || env.FACTURADOR_ENCRYPTION_KEY;
+  return typeof v === 'string' && v ? v : undefined;
+}
+
 function clave(): Buffer {
-  const raw = process.env.FACTURADOR_ENCRYPTION_KEY;
+  const raw = claveCifradoEnv();
   if (!raw) {
-    throw new Error('Falta la variable de entorno FACTURADOR_ENCRYPTION_KEY.');
+    throw new Error('Falta la variable de entorno FAKTIA_ENCRYPTION_KEY.');
   }
   return createHash('sha256').update(raw).digest();
 }
@@ -32,6 +41,6 @@ export function descifrar(valor: string): string {
     decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
     return Buffer.concat([decipher.update(Buffer.from(datosHex, 'hex')), decipher.final()]).toString('utf8');
   } catch {
-    throw new Error('No se pudo descifrar el dato: está corrupto o FACTURADOR_ENCRYPTION_KEY cambió.');
+    throw new Error('No se pudo descifrar el dato: está corrupto o FAKTIA_ENCRYPTION_KEY cambió.');
   }
 }

@@ -1,7 +1,7 @@
 /**
  * Límites entre módulos (ARCHITECTURE.md §4). Corre en el CI: `npm run deps`.
  * - Un módulo solo usa lo que otro exporta en su index.ts.
- * - recibos/core no depende de nada del Facturador (se va a publicar aparte).
+ * - recibos/core no depende de nada del resto de Faktia (se va a publicar aparte).
  * - shared/ no conoce a los módulos.
  * Los tests quedan afuera: arman servicios a mano y pueden importar internos.
  */

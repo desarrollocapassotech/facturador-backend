@@ -12,7 +12,7 @@ export interface AltaCliente {
 }
 
 export interface ClienteRef {
-  /** Cliente ya existente en el Facturador. */
+  /** Cliente ya existente en Faktia. */
   clienteId?: string;
   /** O documento: se busca; si no existe, el ítem queda CON_ERRORES (con `alta` sugerida). */
   tipoDocumento?: TipoDocumentoRef;
